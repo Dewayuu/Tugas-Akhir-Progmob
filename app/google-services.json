@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "86881525332",
+    "project_id": "tugasakhirprogmob",
+    "storage_bucket": "tugasakhirprogmob.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:86881525332:android:78323ec0747881150197c1",
+        "android_client_info": {
+          "package_name": "com.example.tugasakhirprogmob"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyARSB4H2ERw7yQ98uo7IbUx5OCY8Hm6Tjs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

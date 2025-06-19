@@ -20,6 +20,10 @@ zhpanvipViewpagerindicator = "1.2.3"
 stepview = "1.5.1"
 navigationKtx = "2.4.2"
 googleServices = "4.3.15"
+appcompat = "1.7.1"
+material = "1.12.0"
+activity = "1.10.1"
+constraintlayout = "2.2.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -48,6 +52,10 @@ zhpanvip-viewpagerindicator = { group = "com.github.zhpanvip", name = "viewpager
 stepview = { group = "com.github.shuhart", name = "stepview", version.ref = "stepview" }
 #stepview = { group = "com.shuhart.stepview", name = "stepview", version.ref = "stepview" }
 androidx-navigation-fragment-ktx = { group = "androidx.navigation", name = "navigation-fragment-ktx", version.ref = "navigationKtx" }
+androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
+material = { group = "com.google.android.material", name = "material", version.ref = "material" }
+androidx-activity = { group = "androidx.activity", name = "activity", version.ref = "activity" }
+androidx-constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

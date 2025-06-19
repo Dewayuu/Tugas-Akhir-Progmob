@@ -9,7 +9,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:scaleType="centerCrop"
-        android:background="#1E88E5" />
+        android:src="@drawable/bg_gradient_blue" />
 
     <!-- Main content -->
     <androidx.constraintlayout.widget.ConstraintLayout
@@ -110,7 +110,7 @@
 
         <!-- Guest + Sign Up Text -->
         <LinearLayout
-            android:layout_width="0dp"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:layout_marginTop="16dp"
@@ -120,24 +120,13 @@
 
             <TextView
                 android:id="@+id/tvSignUp"
-                android:layout_width="0dp"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Sign up"
-                android:gravity="end"
-                android:textSize="12sp"
-                android:textColor="@android:color/white" />
-
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Sign up"
-                android:gravity="end"
+                android:text="Or Sign up"
                 android:textSize="12sp"
                 android:textColor="@android:color/white" />
         </LinearLayout>
+
 
         <!-- Divider with OR -->
         <LinearLayout

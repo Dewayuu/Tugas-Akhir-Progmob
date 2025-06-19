@@ -9,7 +9,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:scaleType="centerCrop"
-        android:background="#1E88E5"
+        android:src="@drawable/bg_gradient_blue"
         android:contentDescription="@string/bg_register" />
 
     <androidx.constraintlayout.widget.ConstraintLayout

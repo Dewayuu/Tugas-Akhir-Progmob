@@ -12,18 +12,16 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.TugasAkhirProgmob"
         tools:targetApi="31">
+
+        <!-- PAKAI INI SAJA, YANG DI DALAM PACKAGE activities -->
         <activity
             android:name=".activities.ShoppingActivity"
             android:exported="false" />
         <activity
             android:name=".activities.LoginRegisterActivity"
             android:exported="false" />
-        <activity
-            android:name=".ShoppingActivity"
-            android:exported="false" />
-        <activity
-            android:name=".LoginRegisterActivity"
-            android:exported="false" />
+
+        <!-- Main launcher -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -31,7 +29,6 @@
             android:theme="@style/Theme.TugasAkhirProgmob">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>

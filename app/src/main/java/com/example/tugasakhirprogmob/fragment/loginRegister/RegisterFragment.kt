@@ -9,13 +9,13 @@ import androidx.fragment.app.Fragment
 import com.example.tugasakhirprogmob.R
 import com.example.tugasakhirprogmob.activities.LoginRegisterActivity
 
-class LoginFragment : Fragment(R.layout.fragment_login) {
+class RegisterFragment : Fragment(R.layout.fragment_register) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val signUpText = view.findViewById<TextView>(R.id.tvSignUp) // ganti dengan ID TextView kamu
-        signUpText.setOnClickListener {
-            (activity as? LoginRegisterActivity)?.replaceFragment(RegisterFragment())
+        val loginText = view.findViewById<TextView>(R.id.tvAlreadyLogin) // ganti dengan ID TextView kamu
+        loginText.setOnClickListener {
+            (activity as? LoginRegisterActivity)?.replaceFragment(LoginFragment())
         }
     }
 }

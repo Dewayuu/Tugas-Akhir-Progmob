@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.ktx.firestore
@@ -26,53 +27,85 @@ class AuthViewModel : ViewModel() {
     private val auth: FirebaseAuth = Firebase.auth
     private val db = Firebase.firestore
 
-    // State untuk mengelola status loading
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
-    // State untuk menandakan keberhasilan operasi (login/register)
     private val _authSuccess = MutableStateFlow(false)
     val authSuccess: StateFlow<Boolean> = _authSuccess
 
-    // State untuk menampung pesan error
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error
 
-    // Fungsi untuk Registrasi
-    fun register(name: String, email: String, password: String) {
+    // --- FUNGSI BARU UNTUK GOOGLE SIGN-IN ---
+    fun signInWithGoogle(idToken: String) {
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
             try {
-                // 1. Buat pengguna di Firebase Authentication
-                val authResult = auth.createUserWithEmailAndPassword(email, password).await()
+                val credential = GoogleAuthProvider.getCredential(idToken, null)
+                val authResult = auth.signInWithCredential(credential).await()
                 val firebaseUser = authResult.user
 
                 if (firebaseUser != null) {
-                    // 2. Jika berhasil, simpan data pengguna ke Firestore
-                    val user = User(
-                        uid = firebaseUser.uid,
-                        name = name,
-                        email = email,
-                        createdAt = FieldValue.serverTimestamp()
-                    )
-                    // Dokumen akan dinamai sesuai dengan UID pengguna
-                    db.collection("users").document(firebaseUser.uid).set(user).await()
+                    // Cek apakah pengguna baru atau sudah ada
+                    val userDoc = db.collection("users").document(firebaseUser.uid).get().await()
+                    if (!userDoc.exists()) {
+                        // Pengguna baru: Simpan datanya ke Firestore
+                        val newUser = User(
+                            uid = firebaseUser.uid,
+                            name = firebaseUser.displayName ?: "Google User",
+                            email = firebaseUser.email ?: "no-email@google.com",
+                            createdAt = FieldValue.serverTimestamp()
+                        )
+                        db.collection("users").document(firebaseUser.uid).set(newUser).await()
+                        Log.d("AuthViewModel", "New Google user created in Firestore.")
+                    } else {
+                        Log.d("AuthViewModel", "Existing Google user signed in.")
+                    }
                     _authSuccess.value = true
-                    Log.d("AuthViewModel", "Registration and data save successful.")
                 } else {
-                    _error.value = "Failed to create user."
+                    _error.value = "Google Sign-In failed."
                 }
             } catch (e: Exception) {
                 _error.value = e.message
-                Log.e("AuthViewModel", "Registration failed: ${e.message}")
+                Log.e("AuthViewModel", "Google Sign-In failed: ${e.message}")
             } finally {
                 _isLoading.value = false
             }
         }
     }
 
-    // Fungsi untuk Login
+
+    // Fungsi untuk Registrasi email/password
+    fun register(name: String, email: String, password: String) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _error.value = null
+            try {
+                val authResult = auth.createUserWithEmailAndPassword(email, password).await()
+                val firebaseUser = authResult.user
+
+                if (firebaseUser != null) {
+                    val user = User(
+                        uid = firebaseUser.uid,
+                        name = name,
+                        email = email,
+                        createdAt = FieldValue.serverTimestamp()
+                    )
+                    db.collection("users").document(firebaseUser.uid).set(user).await()
+                    _authSuccess.value = true
+                } else {
+                    _error.value = "Failed to create user."
+                }
+            } catch (e: Exception) {
+                _error.value = e.message
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    // Fungsi untuk Login email/password
     fun login(email: String, password: String) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -80,17 +113,14 @@ class AuthViewModel : ViewModel() {
             try {
                 auth.signInWithEmailAndPassword(email, password).await()
                 _authSuccess.value = true
-                Log.d("AuthViewModel", "Login successful.")
             } catch (e: Exception) {
                 _error.value = e.message
-                Log.e("AuthViewModel", "Login failed: ${e.message}")
             } finally {
                 _isLoading.value = false
             }
         }
     }
 
-    // Fungsi untuk mereset status setelah navigasi
     fun resetAuthStatus() {
         _authSuccess.value = false
         _error.value = null

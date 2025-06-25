@@ -1,11 +1,14 @@
 package com.example.tugasakhirprogmob
 
+import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -32,34 +35,38 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.tugasakhirprogmob.ui.theme.TugasAkhirProgmobTheme
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInClient
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.ApiException
 import com.example.tugasakhirprogmob.viewmodel.AuthViewModel
 import com.google.firebase.FirebaseApp
 
 class Register : ComponentActivity() {
+    // Pindahkan GoogleSignInClient ke level Activity agar bisa diakses
+    private lateinit var googleSignInClient: GoogleSignInClient
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // LANGKAH DIAGNOSTIK: Inisialisasi Firebase secara manual di sini
-        // Jika ini memperbaiki crash, berarti ada masalah pada pemuatan kelas MyApplication.
-        try {
-            FirebaseApp.initializeApp(this)
-        } catch (e: IllegalStateException) {
-            Log.e("RegisterActivity", "Firebase sudah diinisialisasi.", e)
-        } catch (e: Exception) {
-            Log.e("RegisterActivity", "Inisialisasi Firebase gagal.", e)
-        }
+        // Konfigurasi Google Sign-In
+        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken(getString(R.string.default_web_client_id)) // Ambil dari strings.xml
+            .requestEmail()
+            .build()
+        googleSignInClient = GoogleSignIn.getClient(this, gso)
+
         setContent {
             TugasAkhirProgmobTheme {
                 RegisterScreen(
+                    googleSignInClient = googleSignInClient, // Teruskan client ke Composable
                     onLoginClick = {
-                        // Navigasi ke halaman Login
                         startActivity(Intent(this, Login::class.java))
                         finish()
                     },
                     onRegisterSuccess = {
-                        // Navigasi ke halaman utama setelah register berhasil
                         startActivity(Intent(this, MainActivity::class.java))
-                        finishAffinity() // Hapus semua activity sebelumnya
+                        finishAffinity()
                     }
                 )
             }
@@ -70,20 +77,36 @@ class Register : ComponentActivity() {
 @Composable
 fun RegisterScreen(
     authViewModel: AuthViewModel = viewModel(),
+    googleSignInClient: GoogleSignInClient, // Terima client
     onLoginClick: () -> Unit,
     onRegisterSuccess: () -> Unit
 ) {
     val context = LocalContext.current
-
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
 
-    // Mengamati state dari ViewModel
     val isLoading by authViewModel.isLoading.collectAsState()
     val authSuccess by authViewModel.authSuccess.collectAsState()
     val error by authViewModel.error.collectAsState()
+
+    // --- LAUNCHER BARU UNTUK GOOGLE SIGN-IN ---
+    val googleSignInLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+            try {
+                val account = task.getResult(ApiException::class.java)!!
+                val idToken = account.idToken!!
+                authViewModel.signInWithGoogle(idToken)
+            } catch (e: ApiException) {
+                Log.w("RegisterScreen", "Google sign in failed", e)
+                Toast.makeText(context, "Google Sign-In failed.", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     // Menampilkan Toast untuk error
     LaunchedEffect(error) {
@@ -121,7 +144,7 @@ fun RegisterScreen(
                     .fillMaxSize()
                     .padding(24.dp)
             ) {
-                Spacer(modifier = Modifier.height(40.dp))
+                Spacer(modifier = Modifier.height(80.dp))
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Image(
@@ -171,6 +194,13 @@ fun RegisterScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Email
+                Text(
+                    text = "Email",
+                    color = Color.White,
+                    fontSize = 14.sp,
+                    modifier = Modifier.align(Alignment.Start)
+                )
+                Spacer(modifier = Modifier.height(4.dp))
                 InputField(
                     value = email,
                     onValueChange = { email = it },
@@ -179,6 +209,13 @@ fun RegisterScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Password
+                Text(
+                    text = "Password",
+                    color = Color.White,
+                    fontSize = 14.sp,
+                    modifier = Modifier.align(Alignment.Start)
+                )
+                Spacer(modifier = Modifier.height(4.dp))
                 InputField(
                     value = password,
                     onValueChange = { password = it },
@@ -188,6 +225,13 @@ fun RegisterScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Confirm Password
+                Text(
+                    text = "Re-type password",
+                    color = Color.White,
+                    fontSize = 14.sp,
+                    modifier = Modifier.align(Alignment.Start)
+                )
+                Spacer(modifier = Modifier.height(4.dp))
                 InputField(
                     value = confirmPassword,
                     onValueChange = { confirmPassword = it },
@@ -228,23 +272,23 @@ fun RegisterScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "Continue as a guest",
-                        color = Color.White,
-                        fontSize = 12.sp
-                    )
-                    Text(
-                        text = "Log In",
-                        color = Color.White,
-                        fontSize = 12.sp
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(32.dp))
+//                Row(
+//                    modifier = Modifier.fillMaxWidth(),
+//                    horizontalArrangement = Arrangement.SpaceBetween
+//                ) {
+//                    Text(
+//                        text = "Continue as a guest",
+//                        color = Color.White,
+//                        fontSize = 12.sp
+//                    )
+//                    Text(
+//                        text = "Log In",
+//                        color = Color.White,
+//                        fontSize = 12.sp
+//                    )
+//                }
+//
+//                Spacer(modifier = Modifier.height(32.dp))
 
                 // Divider
                 Row(
@@ -273,12 +317,14 @@ fun RegisterScreen(
 
                 // Google Login
                 Button(
-                    onClick = { /* TODO */ },
+                    onClick = {
+                        val signInIntent = googleSignInClient.signInIntent
+                        googleSignInLauncher.launch(signInIntent)
+                    },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEEEEEE)),
                     shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp)
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    enabled = !isLoading // Nonaktifkan saat sedang loading
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -287,7 +333,7 @@ fun RegisterScreen(
                     ) {
                         Image(
                             painter = painterResource(id = R.drawable.google),
-                            contentDescription = null,
+                            contentDescription = "Google Icon",
                             modifier = Modifier.size(24.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
@@ -360,7 +406,9 @@ fun RegisterScreenPreview() {
         // PERBAIKAN: Berikan nilai kosong untuk parameter lambda di preview
         RegisterScreen(
             onLoginClick = {},
-            onRegisterSuccess = {}
+            onRegisterSuccess = {},
+            authViewModel = TODO(),
+            googleSignInClient = TODO()
         )
     }
 }

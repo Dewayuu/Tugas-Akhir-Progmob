@@ -1,10 +1,14 @@
 package com.example.tugasakhirprogmob
 
+import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -31,26 +35,38 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.tugasakhirprogmob.ui.theme.TugasAkhirProgmobTheme
 import com.example.tugasakhirprogmob.viewmodel.AuthViewModel
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInClient
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.ApiException
 
 
 class Login : ComponentActivity() {
+    // Tambahkan GoogleSignInClient di level Activity
+    private lateinit var googleSignInClient: GoogleSignInClient
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Konfigurasi Google Sign-In, sama seperti di Register.kt
+        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken(getString(R.string.default_web_client_id))
+            .requestEmail()
+            .build()
+        googleSignInClient = GoogleSignIn.getClient(this, gso)
+
         setContent {
             TugasAkhirProgmobTheme {
                 LoginScreen(
+                    googleSignInClient = googleSignInClient, // Teruskan client ke Composable
                     onSignUpClick = {
-                        // Navigasi ke halaman Register
                         startActivity(Intent(this, Register::class.java))
                         finish()
                     },
                     onLoginSuccess = {
-                        // PERBAIKAN: Navigasi ke Activity yang menampung Composable utama (misal: MainActivity)
-                        // Ganti MainActivity::class.java dengan Activity utama Anda jika namanya berbeda.
-                        // Asumsinya, MainActivity akan memanggil setContent { MainApp() }
                         val intent = Intent(this, MainActivity::class.java)
                         startActivity(intent)
-                        finishAffinity() // Hapus semua activity sebelumnya dari back stack
+                        finishAffinity()
                     }
                 )
             }
@@ -61,6 +77,7 @@ class Login : ComponentActivity() {
 @Composable
 fun LoginScreen(
     authViewModel: AuthViewModel = viewModel(),
+    googleSignInClient: GoogleSignInClient, // Terima client
     onSignUpClick: () -> Unit,
     onLoginSuccess: () -> Unit
 ) {
@@ -69,10 +86,26 @@ fun LoginScreen(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
-    // Mengamati state dari ViewModel
     val isLoading by authViewModel.isLoading.collectAsState()
     val authSuccess by authViewModel.authSuccess.collectAsState()
     val error by authViewModel.error.collectAsState()
+
+    // Launcher untuk menangani hasil dari Google Sign-In
+    val googleSignInLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+            try {
+                val account = task.getResult(ApiException::class.java)!!
+                val idToken = account.idToken!!
+                authViewModel.signInWithGoogle(idToken)
+            } catch (e: ApiException) {
+                Log.w("LoginScreen", "Google sign in failed", e)
+                Toast.makeText(context, "Google Sign-In failed.", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     // Menampilkan Toast untuk error
     LaunchedEffect(error) {
@@ -209,21 +242,24 @@ fun LoginScreen(
 
             // Google Login
             Button(
-                onClick = { /* TODO */ },
+                onClick = {
+                    val signInIntent = googleSignInClient.signInIntent
+                    googleSignInLauncher.launch(signInIntent)
+                },
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEEEEEE)),
                 shape = RoundedCornerShape(8.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(48.dp)
+                    .height(48.dp),
+                enabled = !isLoading
             ) {
-                // Ikon + teks di dalam Row agar ikon dan teks sejajar
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Image(
-                        painter = painterResource(id = R.drawable.google), // ganti sesuai nama file
+                        painter = painterResource(id = R.drawable.google),
                         contentDescription = "Google Icon",
                         modifier = Modifier.size(24.dp)
                     )
@@ -235,6 +271,7 @@ fun LoginScreen(
                     )
                 }
             }
+
 
 
             // Terms
@@ -263,7 +300,9 @@ fun LoginScreenPreview() {
         // PERBAIKAN: Berikan nilai kosong untuk parameter lambda di preview
         LoginScreen(
             onSignUpClick = {},
-            onLoginSuccess = {}
+            onLoginSuccess = {},
+            authViewModel = TODO(),
+            googleSignInClient = TODO()
         )
     }
 }

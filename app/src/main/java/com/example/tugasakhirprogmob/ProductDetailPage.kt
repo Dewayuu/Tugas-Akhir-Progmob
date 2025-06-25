@@ -91,7 +91,7 @@ class ProductDetailPage : ComponentActivity() {
 fun ProductDetailScreen(product: ProductDetail) {
     Scaffold(
         // Kita gunakan BottomNavBar yang sudah dibuat sebelumnya
-        bottomBar = { SearchBottomNavBar(selectedItem = 0) },
+//        bottomBar = { SearchBottomNavBar(selectedItem = 0) },
         containerColor = Color.White
     ) { innerPadding ->
         LazyColumn(

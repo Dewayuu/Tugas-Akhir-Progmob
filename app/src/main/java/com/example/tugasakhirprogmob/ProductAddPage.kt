@@ -35,6 +35,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.example.tugasakhirprogmob.ui.theme.TugasAkhirProgmobTheme
 import com.example.tugasakhirprogmob.viewmodel.ProductViewModel
+import androidx.navigation.NavController // Pastikan import ini ada
+import androidx.navigation.compose.rememberNavController
+import com.example.tugasakhirprogmob.ui.components.BottomNavBar
 
 // Recheck Dependencies on Gradle:
 // implementation("io.coil-kt:coil-compose:2.6.0")
@@ -45,20 +48,21 @@ import com.example.tugasakhirprogmob.viewmodel.ProductViewModel
 // implementation("com.google.firebase:firebase-storage-ktx")
 
 
-class ProductCreatePage : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContent {
-            TugasAkhirProgmobTheme {
-                ProductCreateScreen(onBackClick = { finish()  })
-            }
-        }
-    }
-}
+//class ProductCreatePage : ComponentActivity() {
+//    override fun onCreate(savedInstanceState: Bundle?) {
+//        super.onCreate(savedInstanceState)
+//        setContent {
+//            TugasAkhirProgmobTheme {
+//                ProductCreateScreen(onBackClick = { finish()  })
+//            }
+//        }
+//    }
+//}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProductCreateScreen(
+    navController: NavController,
     onBackClick: () -> Unit,
     productViewModel: ProductViewModel = viewModel() // Mengambil instance dari ViewModel
 ) {
@@ -110,6 +114,7 @@ fun ProductCreateScreen(
         bottomBar = {
             // Jika Anda memiliki SearchBottomNavBar, Anda bisa uncomment ini
             // SearchBottomNavBar(selectedItem = 2)
+            BottomNavBar(navController = navController)
         },
         containerColor = Color(0xFFF5F5F5)
     ) { innerPadding ->
@@ -320,6 +325,10 @@ fun CategoryDropdown(
 @Composable
 fun ProductCreateScreenPreview() {
     TugasAkhirProgmobTheme {
-        ProductCreateScreen(onBackClick = {})
+        val dummyNavController = rememberNavController()
+        ProductCreateScreen(
+            navController = dummyNavController,
+            onBackClick = {}
+        )
     }
 }

@@ -14,7 +14,7 @@
         tools:targetApi="31">
 
         <activity
-            android:name=".ViewCart" android:exported="true" android:label="@string/app_name" android:theme="@style/Theme.TugasAkhirProgmob">
+            android:name=".Checkout" android:exported="true" android:label="@string/app_name" android:theme="@style/Theme.TugasAkhirProgmob">
                         <intent-filter>
                             <action android:name="android.intent.action.MAIN" />
                             <category android:name="android.intent.category.LAUNCHER" />

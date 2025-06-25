@@ -67,7 +67,7 @@ fun ProductCreateScreen(onBackClick: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { /* No title needed as per screenshot */ },
+                title = { Text(text="Add Product", fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(
@@ -82,7 +82,7 @@ fun ProductCreateScreen(onBackClick: () -> Unit) {
         bottomBar = {
             // Menggunakan kembali BottomNavBar yang ada, dengan item 'add' yang dipilih
             // Pastikan Anda memiliki implementasi SearchBottomNavBar di proyek Anda
-            // SearchBottomNavBar(selectedItem = 2)
+             SearchBottomNavBar(selectedItem = 2)
         },
         containerColor = Color(0xFFF5F5F5)
     ) { innerPadding ->
@@ -162,7 +162,7 @@ fun ProductCreateScreen(onBackClick: () -> Unit) {
                         onValueChange = { description = it },
                         placeholder = "Lorem ipsum dolor sit amet...",
                         singleLine = false,
-                        modifier = Modifier.height(150.dp)
+                        modifier = Modifier.height(200.dp)
                     )
                 }
                 item { Spacer(modifier = Modifier.height(16.dp)) }
@@ -188,7 +188,7 @@ fun ProductCreateScreen(onBackClick: () -> Unit) {
 fun ImageUploader(imageUri: Uri?, onClick: () -> Unit) {
     Box(
         modifier = Modifier
-            .size(140.dp)
+            .size(500.dp,200.dp)
             .clip(RoundedCornerShape(16.dp)) // Clip bentuk sebelum border
             .background(Color.White) // Menambahkan latar belakang putih
             .border(

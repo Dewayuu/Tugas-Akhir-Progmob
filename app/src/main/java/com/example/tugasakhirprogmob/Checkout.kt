@@ -1,5 +1,8 @@
-package com.example.tugasakhirprogmob.ui
+package com.example.tugasakhirprogmob
 
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -22,6 +25,21 @@ import com.example.tugasakhirprogmob.R
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import com.example.tugasakhirprogmob.ui.theme.TugasAkhirProgmobTheme
+
+class Checkout : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        // Di dalam rumah ini, kita meletakkan perabotan kita
+        setContent {
+            TugasAkhirProgmobTheme {
+                // Memanggil fungsi Composable yang sudah Anda buat
+                CheckoutScreen()
+            }
+        }
+    }
+}
 
 @Composable
 fun CheckoutScreen() {

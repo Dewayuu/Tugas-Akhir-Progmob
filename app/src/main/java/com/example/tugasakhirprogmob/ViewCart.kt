@@ -1,5 +1,8 @@
 package com.example.tugasakhirprogmob
 
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -20,6 +23,21 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.tugasakhirprogmob.ui.theme.TugasAkhirProgmobTheme
+
+// INI ADALAH "RUMAH"-NYA
+class ViewCart : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        // Di dalam rumah ini, kita meletakkan perabotan kita
+        setContent {
+            TugasAkhirProgmobTheme {
+                // Memanggil fungsi Composable yang sudah Anda buat
+                ViewCartScreen()
+            }
+        }
+    }
+}
 
 @Composable
 fun ViewCartScreen() {

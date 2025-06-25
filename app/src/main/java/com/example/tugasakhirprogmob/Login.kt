@@ -1,5 +1,8 @@
 package com.example.tugasakhirprogmob
 
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -23,6 +26,19 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 
 
+class Login : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        // Di dalam rumah ini, kita meletakkan perabotan kita
+        setContent {
+            TugasAkhirProgmobTheme {
+                // Memanggil fungsi Composable yang sudah Anda buat
+                LoginScreen()
+            }
+        }
+    }
+}
 
 @Composable
 fun LoginScreen() {

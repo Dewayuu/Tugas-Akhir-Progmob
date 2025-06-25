@@ -1,5 +1,8 @@
 package com.example.tugasakhirprogmob
 
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -23,6 +26,20 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.tugasakhirprogmob.R
 import com.example.tugasakhirprogmob.ui.theme.TugasAkhirProgmobTheme
+
+class Register : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        // Di dalam rumah ini, kita meletakkan perabotan kita
+        setContent {
+            TugasAkhirProgmobTheme {
+                // Memanggil fungsi Composable yang sudah Anda buat
+                RegisterScreen()
+            }
+        }
+    }
+}
 
 @Composable
 fun RegisterScreen() {

@@ -1,8 +1,5 @@
 package com.example.tugasakhirprogmob
 
-import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -50,22 +47,26 @@ import coil.compose.AsyncImage
 @Composable
 fun SearchScreen(
     navController: NavController,
-    viewModel: SearchViewModel = viewModel()
+//    viewModel: SearchViewModel = viewModel(),
+    uiState: SearchUiState,
+    onQueryChange: (String) -> Unit,
+    onSearch: (String) -> Unit,
+    onSearchFocusChange: () -> Unit
 ) {
     // Ambil state dan fungsi dari ViewModel
-    val uiState by viewModel.uiState.collectAsState()
+//    val uiState by viewModel.uiState.collectAsState()
     val keyboardController = LocalSoftwareKeyboardController.current
 
     Scaffold(
         topBar = {
             SearchTopBar(
                 query = uiState.searchQuery,
-                onQueryChange = viewModel::onSearchQueryChanged,
+                onQueryChange = onQueryChange,
                 onSearch = { query ->
-                    viewModel.executeSearch(query)
+                    onSearch(query)
                     keyboardController?.hide()
                 },
-                onFocusChange = viewModel::onSearchFocused
+                onFocusChange = onSearchFocusChange
             )
         },
         bottomBar = { BottomNavBar(navController = navController) },
@@ -80,8 +81,8 @@ fun SearchScreen(
                 SearchHistoryView(
                     history = uiState.searchHistory,
                     onHistoryClick = { historyTerm ->
-                        viewModel.onSearchQueryChanged(historyTerm)
-                        viewModel.executeSearch(historyTerm)
+                        onQueryChange(historyTerm)
+                        onSearch(historyTerm)
                         keyboardController?.hide()
                     }
                 )
@@ -244,6 +245,20 @@ fun SearchResultsHeader(query: String) {
 fun SearchScreenPreview() {
     TugasAkhirProgmobTheme {
         val dummyNavController = rememberNavController()
-        SearchScreen(navController = dummyNavController)
+
+        // Buat data bohongan untuk preview
+        val dummyUiState = SearchUiState(
+            displayedProducts = emptyList(), // atau isi dengan data produk palsu
+            isSearching = false,
+            isLoading = false
+        )
+
+        SearchScreen(
+            navController = dummyNavController,
+            uiState = dummyUiState,
+            onQueryChange = {},
+            onSearch = {},
+            onSearchFocusChange = {}
+        )
     }
 }

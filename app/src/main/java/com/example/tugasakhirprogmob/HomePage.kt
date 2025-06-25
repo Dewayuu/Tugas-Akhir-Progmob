@@ -1,40 +1,48 @@
 package com.example.tugasakhirprogmob
 
-import android.content.Intent
-import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import coil.compose.AsyncImage
+import androidx.navigation.navArgument
 import com.example.tugasakhirprogmob.ui.components.BottomNavBar
 import com.example.tugasakhirprogmob.ui.theme.TugasAkhirProgmobTheme
+import com.example.tugasakhirprogmob.viewmodel.Product
 import com.example.tugasakhirprogmob.viewmodel.ProductViewModel
+import com.example.tugasakhirprogmob.viewmodel.SearchViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
 import java.text.NumberFormat
 import java.util.Locale
+
 
 // Wrapper utama aplikasi dengan Navigasi.
 // Ini bisa berada di MainActivity.kt atau di sini.
@@ -44,19 +52,36 @@ fun MainApp() {
     val navController = rememberNavController()
     NavHost(
         navController = navController,
-        startDestination = "home"
+        startDestination = Screen.Home.route
     ) {
-        composable("home") {
+        composable(Screen.Home.route) {
             HomeScreen(navController = navController)
         }
-        // PERBAIKAN: Ubah nama rute di sini agar cocok dengan yang dipanggil
-        composable("add") {
+        composable(Screen.Add.route) {
             ProductCreateScreen(
                 navController = navController,
                 onBackClick = { navController.popBackStack() }
             )
         }
-        // ... rute lain seperti "profile", "chat" bisa ditambahkan di sini
+        composable(Screen.SearchScreen.route) {
+            val searchViewModel: SearchViewModel = viewModel()
+            val uiState by searchViewModel.uiState.collectAsStateWithLifecycle()
+            SearchScreen(
+                navController = navController,
+                uiState = uiState,
+                onQueryChange = searchViewModel::onSearchQueryChanged,
+                onSearch = searchViewModel::executeSearch,
+                onSearchFocusChange = searchViewModel::onSearchFocused
+            )
+        }
+        composable(Screen.Cart.route) {
+            ViewCartScreen(
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
     }
 }
 
@@ -67,30 +92,72 @@ fun HomeScreen(
     productViewModel: ProductViewModel = viewModel()
 ) {
     val context = LocalContext.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
 
-    // Mengamati state dari ViewModel
-    val products by productViewModel.products.collectAsState()
-    val isLoading by productViewModel.isLoading.collectAsState()
+    // --- STATE DARI VIEWMODEL (TIDAK BERUBAH) ---
+    val realProducts by productViewModel.products.collectAsStateWithLifecycle()
+    val isLoading by productViewModel.isLoading.collectAsStateWithLifecycle()
 
-    // Panggil fetchProducts() saat Composable pertama kali dibuat
-    // Ini akan memicu pengambilan data dari Firestore
+    // --- START: KODE UNTUK FITUR PENCARIAN ---
+    var searchQuery by remember { mutableStateOf("") }
+    var isSearchBarFocused by remember { mutableStateOf(false) }
+    var searchHistory by remember { mutableStateOf<List<String>>(emptyList()) }
+    var searchExecuted by remember { mutableStateOf(false) }
+
+    val displayedProducts = if (searchExecuted) {
+        realProducts.filter {
+            it.name.contains(searchQuery, ignoreCase = true) ||
+                    it.brand.contains(searchQuery, ignoreCase = true)
+        }
+    } else {
+        realProducts
+    }
+
+    fun performSearch(query: String) {
+        val trimmedQuery = query.trim()
+        keyboardController?.hide()
+        focusManager.clearFocus()
+
+        if (trimmedQuery.isNotBlank()) {
+            if (!searchHistory.contains(trimmedQuery)) {
+                searchHistory = (listOf(trimmedQuery) + searchHistory).take(10)
+            }
+            searchQuery = trimmedQuery
+            searchExecuted = true
+            isSearchBarFocused = false
+        } else {
+            searchQuery = ""
+            searchExecuted = false
+            isSearchBarFocused = false
+        }
+    }
+    // --- END: KODE UNTUK FITUR PENCARIAN ---
+
     LaunchedEffect(Unit) {
         productViewModel.fetchProducts()
     }
 
     Scaffold(
         topBar = {
+            // --- TOPBAR DIGANTI DENGAN VERSI YANG MEMILIKI SEARCH BAR ---
             TopBar(
-                onCartClick = {
-                    val intent = Intent(context, ViewCart::class.java)
-                    context.startActivity(intent)
-                }
+                query = searchQuery,
+                onQueryChange = {
+                    searchQuery = it
+                    if (it.isBlank()) {
+                        searchExecuted = false
+                    }
+                },
+                onSearch = { performSearch(it) },
+                onFocusChange = { isFocused -> isSearchBarFocused = isFocused },
+                onCartClick = { navController.navigate(Screen.Cart.route) }
             )
         },
         bottomBar = {
-            // BottomNavBar yang sudah ada digunakan di sini
-            // Logikanya tidak diubah
-            BottomNavBar(navController = navController)
+            if (!isSearchBarFocused && !searchExecuted) {
+                BottomNavBar(navController = navController)
+            }
         }
     ) { paddingValues ->
         Column(
@@ -98,106 +165,206 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Tampilkan loading indicator hanya saat data sedang diambil pertama kali
-            if (isLoading && products.isEmpty()) {
+            // Tampilkan loading indicator hanya di awal
+            if (isLoading && realProducts.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
+            }
+            // --- LOGIKA TAMPILAN DINAMIS UNTUK PENCARIAN ---
+            else if (isSearchBarFocused) {
+                SearchHistoryView(
+                    history = searchHistory,
+                    onHistoryClick = { historyTerm -> performSearch(historyTerm) }
+                )
+            } else if (searchExecuted) {
+                SearchResultsUI(
+                    query = searchQuery,
+                    products = displayedProducts,
+                    navController = navController,
+                    onDismiss = {
+                        focusManager.clearFocus()
+                        searchQuery = ""
+                        searchExecuted = false
+                    }
+                )
             } else {
-                // Tampilkan konten utama jika tidak loading atau data sudah ada
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(vertical = 8.dp)
-                ) {
-                    // Item statis seperti banner dan filter tetap ada
-                    item { FilterChips() }
-                    item { TopSellingBanner() }
-                    item { CategoryRow() }
-                    item {
-                        Row(
-                            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("Newest", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                            Text(">", Modifier.clickable { /* TODO: Navigasi ke halaman 'semua produk' */ })
-                        }
-                    }
+                // Tampilan default homepage
+                DefaultHomeScreenContent(products = realProducts, navController = navController)
+            }
+        }
+    }
+}
 
-                    // INI BAGIAN UTAMA: Grid untuk menampilkan produk dari Firestore
-                    // `products.chunked(2)` membagi list produk menjadi baris-baris berisi 2 item
-                    items(products.chunked(2)) { productRow ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            productRow.forEach { product ->
-                                // Setiap produk ditampilkan dalam ProductCard
-                                Box(modifier = Modifier.weight(1f)) {
-                                    ProductCard(product = product)
-                                }
-                            }
-                            // Tambahkan Spacer jika jumlah item ganjil agar rata kiri
-                            if (productRow.size == 1) {
-                                Spacer(modifier = Modifier.weight(1f))
+// --- TOPBAR BARU DENGAN SEARCHFIELD ---
+@Composable
+fun TopBar(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    onSearch: (String) -> Unit,
+    onFocusChange: (Boolean) -> Unit,
+    onCartClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        OutlinedTextField(
+            value = query,
+            onValueChange = onQueryChange,
+            placeholder = { Text("Search Edge...") },
+            modifier = Modifier.weight(1f).height(56.dp).onFocusChanged { onFocusChange(it.isFocused) },
+            shape = RoundedCornerShape(12.dp),
+            leadingIcon = { Icon(painterResource(id = R.drawable.search), contentDescription = null, modifier = Modifier.size(26.dp)) },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            keyboardActions = KeyboardActions(onSearch = { onSearch(query) }),
+            colors = OutlinedTextFieldDefaults.colors(
+                unfocusedContainerColor = Color(0xFFF0F0F0),
+                focusedContainerColor = Color.White,
+                focusedBorderColor = Color.Gray,
+                unfocusedBorderColor = Color.Transparent,
+                cursorColor = Color.Black
+            )
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        IconButton(onClick = onCartClick) {
+            Icon(painterResource(id = R.drawable.cart), contentDescription = "Cart", modifier = Modifier.size(28.dp))
+        }
+    }
+}
+
+
+// --- KONTEN-KONTEN SCREEN (DIPISAHKAN AGAR LEBIH RAPI) ---
+// Composable-composable di bawah ini bisa Anda pindahkan ke file lain jika mau,
+// tapi tidak masalah jika tetap di sini.
+
+@Composable
+fun DefaultHomeScreenContent(products: List<Product>, navController: NavController) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(vertical = 8.dp)
+    ) {
+        item { FilterChips() }
+        item { TopSellingBanner() }
+        item { CategoryRow() }
+        item {
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Newest", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Text(">", Modifier.clickable { /* TODO */ })
+            }
+        }
+        items(products.chunked(2)) { productRow ->
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                productRow.forEach { product ->
+                    Box(modifier = Modifier.weight(1f)) {
+                        ProductCard(product = product, navController = navController)
+                    }
+                }
+                if (productRow.size == 1) { Spacer(modifier = Modifier.weight(1f)) }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+    }
+}
+
+@Composable
+fun SearchResultsUI(query: String, products: List<Product>, navController: NavController, onDismiss: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onDismiss
+            )
+    ) {
+        SearchResultsHeader(query = query)
+
+        if (products.isEmpty()) {
+            // JIKA KOSONG: Tampilkan pesan "Product not found"
+            Box(
+                modifier = Modifier
+                    .weight(1f) // Mengambil sisa tinggi
+                    .fillMaxWidth(), // <-- TAMBAHKAN INI AGAR BOX MENJADI LEBAR
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.search),
+                        contentDescription = "Not Found",
+                        modifier = Modifier.size(80.dp),
+                        tint = Color.Gray
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Product not found",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "Try using different keywords.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.Gray
+                    )
+                }
+            }
+        } else {
+            // JIKA ADA ISINYA: Tampilkan grid produk
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(8.dp)
+            ) {
+                items(products.chunked(2)) { productRow ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        productRow.forEach { product ->
+                            Box(modifier = Modifier.weight(1f)) {
+                                ProductCard(product = product, navController = navController)
                             }
                         }
-                        Spacer(modifier = Modifier.height(8.dp))
+                        if (productRow.size == 1) {
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
                     }
+                    Spacer(modifier = Modifier.height(8.dp))
                 }
             }
         }
     }
 }
 
-// ProductCard ini sekarang menerima data Product dari ViewModel
+// ProductCard perlu dimodifikasi untuk menerima NavController agar bisa navigasi ke detail
 @Composable
-fun ProductCard(product: com.example.tugasakhirprogmob.viewmodel.Product) {
-    // Helper untuk memformat harga ke dalam Rupiah
-    val formatCurrency = remember {
-        NumberFormat.getCurrencyInstance(Locale("in", "ID"))
-    }
-
-    Column(modifier = Modifier.clickable { /* TODO: Navigasi ke detail produk dengan ID product.id */ }) {
-        // Menggunakan AsyncImage dari pustaka Coil untuk memuat gambar dari URL
+fun ProductCard(product: Product, navController: NavController) {
+    val formatCurrency = remember { NumberFormat.getCurrencyInstance(Locale("in", "ID")) }
+    Column(modifier = Modifier.clickable {
+        // TODO: Navigasi ke detail produk dengan ID product.id
+        // Contoh: navController.navigate("productDetail/${product.id}")
+    }) {
         AsyncImage(
             model = product.imageUrl,
             contentDescription = product.name,
             contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(1f) // Membuat gambar menjadi persegi
-                .clip(RoundedCornerShape(12.dp))
-                .background(Color.LightGray) // Latar belakang placeholder saat gambar loading
+            modifier = Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(12.dp)).background(Color.LightGray)
         )
         Spacer(modifier = Modifier.height(8.dp))
-        Text(product.brand, style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-        Text(product.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+        Text(product.brand, style = MaterialTheme.typography.labelSmall, color = Color.Gray, maxLines = 1)
+        Text(product.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold, maxLines = 1)
         Text(formatCurrency.format(product.price), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
     }
 }
-
-
-@Composable
-fun TopBar(onCartClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text("Edge", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-        IconButton(onClick = onCartClick) {
-            Icon(
-                painter = painterResource(id = R.drawable.cart),
-                contentDescription = "Cart",
-                modifier = Modifier.size(28.dp)
-            )
-        }
-    }
-}
-
 
 // --- Composable lainnya (tetap sama) ---
 

@@ -144,7 +144,7 @@ fun RegisterScreen(
                     .fillMaxSize()
                     .padding(24.dp)
             ) {
-                Spacer(modifier = Modifier.height(80.dp))
+                Spacer(modifier = Modifier.height(60.dp))
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Image(

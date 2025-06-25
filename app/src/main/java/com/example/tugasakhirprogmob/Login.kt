@@ -45,9 +45,12 @@ class Login : ComponentActivity() {
                         finish()
                     },
                     onLoginSuccess = {
-                        // Navigasi ke halaman utama setelah login berhasil
-                        startActivity(Intent(this, HomePage::class.java))
-                        finishAffinity() // Hapus semua activity sebelumnya
+                        // PERBAIKAN: Navigasi ke Activity yang menampung Composable utama (misal: MainActivity)
+                        // Ganti MainActivity::class.java dengan Activity utama Anda jika namanya berbeda.
+                        // Asumsinya, MainActivity akan memanggil setContent { MainApp() }
+                        val intent = Intent(this, MainActivity::class.java)
+                        startActivity(intent)
+                        finishAffinity() // Hapus semua activity sebelumnya dari back stack
                     }
                 )
             }

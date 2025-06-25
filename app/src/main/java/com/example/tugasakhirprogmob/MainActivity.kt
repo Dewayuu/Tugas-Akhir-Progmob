@@ -1,53 +1,34 @@
 package com.example.tugasakhirprogmob
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import com.example.tugasakhirprogmob.ui.theme.TugasAkhirProgmobTheme // Make sure this path is correct
+import com.example.tugasakhirprogmob.ui.theme.TugasAkhirProgmobTheme
+import com.google.firebase.auth.ktx.auth
+import com.google.firebase.ktx.Firebase
 
 class MainActivity : ComponentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Pemeriksaan keamanan: Jika pengguna secara tidak sengaja sampai ke activity ini
+        // tanpa login, arahkan mereka kembali ke halaman Login.
+        if (Firebase.auth.currentUser == null) {
+            startActivity(Intent(this, Login::class.java))
+            finish() // Tutup MainActivity agar tidak bisa kembali ke sini dengan tombol back
+            return   // Hentikan eksekusi lebih lanjut dari fungsi onCreate
+        }
+
         setContent {
-            TugasAkhirProgmobTheme { // Your app's theme
-                // A surface container using the 'background' color from the theme
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    SimpleGreeting("Android")
-                }
+            TugasAkhirProgmobTheme {
+                // MainApp adalah Composable yang berisi NavHost dan Bottom Navigation Bar.
+                // Ini adalah titik masuk untuk bagian aplikasi yang memerlukan autentikasi.
+                // Pastikan fungsi @Composable MainApp() sudah ada di dalam proyek Anda
+                // (misalnya di dalam file HomePage.kt seperti yang kita buat sebelumnya).
+                MainApp()
             }
         }
-    }
-}
-
-@Composable
-fun SimpleGreeting(name: String) {
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(text = "Hello $name!")
-        Text(text = "Your app is working!")
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun DefaultPreview() {
-    TugasAkhirProgmobTheme {
-        SimpleGreeting("Preview")
     }
 }

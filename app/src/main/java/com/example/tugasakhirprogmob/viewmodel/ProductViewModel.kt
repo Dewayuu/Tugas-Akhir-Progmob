@@ -4,8 +4,10 @@ import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.Timestamp
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.ktx.storage
@@ -15,9 +17,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.util.UUID
 
-// Data class yang akan dipetakan ke dokumen di Firestore
+// Data class yang dipetakan ke dokumen di Firestore
+// Properti dibuat nullable agar bisa di-map dari Firestore dengan aman
 data class Product(
-    val id: String? = null,
+    val id: String = "",
     val name: String = "",
     val price: Double = 0.0,
     val description: String = "",
@@ -26,8 +29,23 @@ data class Product(
     val imageUrl: String = "",
     val sellerId: String = "",
     val sellerName: String = "",
-    val postedAt: FieldValue? = null
+    val postedAt: Timestamp? = null // Ubah ke Timestamp agar bisa menerima data dari Firestore
 )
+
+// Data class untuk request penambahan produk baru
+// Ini memisahkan model untuk 'create' dari model untuk 'read'
+data class ProductRequest(
+    val name: String,
+    val price: Double,
+    val description: String,
+    val category: String,
+    val brand: String,
+    val imageUrl: String,
+    val sellerId: String,
+    val sellerName: String,
+    val postedAt: FieldValue = FieldValue.serverTimestamp()
+)
+
 
 class ProductViewModel : ViewModel() {
 
@@ -35,35 +53,39 @@ class ProductViewModel : ViewModel() {
     private val auth = Firebase.auth
     private val storage = Firebase.storage
 
-    // State untuk menampung daftar produk dari Firestore
     private val _products = MutableStateFlow<List<Product>>(emptyList())
     val products: StateFlow<List<Product>> = _products
 
-    // State untuk menunjukkan status loading
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
-    // State untuk menunjukkan status selesai (misal: setelah berhasil menambah produk)
     private val _isSuccess = MutableStateFlow(false)
     val isSuccess: StateFlow<Boolean> = _isSuccess
 
-    // Dipanggil untuk mengambil semua produk (misal: untuk HomePage.kt)
+    // Fungsi untuk mengambil semua produk, diurutkan dari yang terbaru
     fun fetchProducts() {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val snapshot = db.collection("products").get().await()
-                _products.value = snapshot.toObjects(Product::class.java)
+                val snapshot = db.collection("products")
+                    .orderBy("postedAt", Query.Direction.DESCENDING) // Urutkan dari yang terbaru
+                    .get()
+                    .await()
+
+                // Map dokumen ke data class, sertakan ID dokumen
+                _products.value = snapshot.documents.mapNotNull { doc ->
+                    val product = doc.toObject(Product::class.java)
+                    product?.copy(id = doc.id) // Salin objek dan tambahkan ID-nya
+                }
+                Log.d("ProductViewModel", "Fetched ${_products.value.size} products.")
             } catch (e: Exception) {
                 Log.e("ProductViewModel", "Error fetching products", e)
-                // Handle error (misal: tampilkan pesan)
             } finally {
                 _isLoading.value = false
             }
         }
     }
 
-    // Fungsi ini akan dipanggil dari ProductCreatePage.kt saat tombol "Add Listing" ditekan
     fun addProduct(
         name: String,
         priceStr: String,
@@ -72,9 +94,8 @@ class ProductViewModel : ViewModel() {
         description: String,
         imageUri: Uri?
     ) {
-        // Validasi input dasar
         if (name.isBlank() || priceStr.isBlank() || imageUri == null) {
-            // TODO: Tampilkan pesan error ke pengguna
+            Log.e("ProductViewModel", "Validation failed: Missing fields.")
             return
         }
 
@@ -84,17 +105,19 @@ class ProductViewModel : ViewModel() {
 
             val currentUser = auth.currentUser
             if (currentUser == null) {
-                Log.e("ProductViewModel", "User not logged in")
+                Log.e("ProductViewModel", "User not logged in, cannot add product.")
                 _isLoading.value = false
                 return@launch
             }
 
             try {
-                // 1. Unggah gambar ke Firebase Storage
                 val imageUrl = uploadProductImage(imageUri)
+                if(imageUrl.isEmpty()) {
+                    throw Exception("Image upload failed.")
+                }
 
-                // 2. Siapkan objek produk untuk disimpan
-                val product = Product(
+                // Gunakan ProductRequest untuk membuat produk baru
+                val newProduct = ProductRequest(
                     name = name,
                     price = priceStr.toDoubleOrNull() ?: 0.0,
                     brand = brand,
@@ -102,35 +125,32 @@ class ProductViewModel : ViewModel() {
                     description = description,
                     imageUrl = imageUrl,
                     sellerId = currentUser.uid,
-                    sellerName = currentUser.displayName ?: "Anonymous", // Ambil nama pengguna jika ada
-                    postedAt = FieldValue.serverTimestamp() // Gunakan timestamp server
+                    // Ambil nama dari profil pengguna jika tersedia
+                    sellerName = currentUser.displayName.takeIf { !it.isNullOrBlank() } ?: "Anonymous Seller"
                 )
 
-                // 3. Simpan objek produk ke Firestore
-                db.collection("products").add(product).await()
+                db.collection("products").add(newProduct).await()
 
-                Log.d("ProductViewModel", "Product added successfully!")
-                _isSuccess.value = true // Tandai berhasil
+                Log.d("ProductViewModel", "Product added successfully to Firestore.")
+                _isSuccess.value = true
 
             } catch (e: Exception) {
                 Log.e("ProductViewModel", "Error adding product", e)
-                // TODO: Tampilkan pesan error ke pengguna
             } finally {
                 _isLoading.value = false
             }
         }
     }
 
-    // Fungsi helper untuk mengunggah gambar dan mendapatkan URL-nya
     private suspend fun uploadProductImage(uri: Uri): String {
         return try {
-            val fileName = "products/${UUID.randomUUID()}.jpg"
+            val fileName = "product_images/${UUID.randomUUID()}.jpg"
             val storageRef = storage.reference.child(fileName)
             storageRef.putFile(uri).await()
             storageRef.downloadUrl.await().toString()
         } catch (e: Exception) {
-            Log.e("ProductViewModel", "Error uploading image", e)
-            "" // Kembalikan string kosong jika gagal
+            Log.e("ProductViewModel", "Error uploading image to Firebase Storage", e)
+            ""
         }
     }
 

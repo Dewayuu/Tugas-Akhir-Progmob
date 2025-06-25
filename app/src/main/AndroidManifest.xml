@@ -35,9 +35,9 @@
             android:name=".HomePage"
             android:exported="false" />
 
-<!--        <activity-->
-<!--            android:name=".ProductAddPage"-->
-<!--            android:exported="false" />-->
+        <activity
+            android:name=".MainActivity"
+            android:exported="false" />
 
         <activity
             android:name=".ProductDetailPage"

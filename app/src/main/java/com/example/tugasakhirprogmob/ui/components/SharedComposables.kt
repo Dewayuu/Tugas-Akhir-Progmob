@@ -1,7 +1,11 @@
 package com.example.tugasakhirprogmob.ui.components
 
+import java.text.NumberFormat
+import java.util.Locale
+import androidx.compose.runtime.remember
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -22,12 +26,15 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.tugasakhirprogmob.Product
+import com.example.tugasakhirprogmob.viewmodel.Product
 import com.example.tugasakhirprogmob.R
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.tugasakhirprogmob.Screen
 import androidx.compose.runtime.getValue
+import coil.compose.AsyncImage
+
+
 
 @Composable
 fun BottomNavBar(navController: NavController) {
@@ -114,6 +121,9 @@ fun SearchHistoryView(history: List<String>, onHistoryClick: (String) -> Unit) {
 
 @Composable
 fun ProductCard(product: Product) {
+    val formatCurrency = remember {
+        NumberFormat.getCurrencyInstance(Locale("in", "ID"))
+    }
     Surface(
         modifier = Modifier
             .fillMaxWidth(), // Dihapus .padding(8.dp) agar konsisten jika dipanggil dari grid
@@ -123,14 +133,14 @@ fun ProductCard(product: Product) {
         Column(
             modifier = Modifier.padding(12.dp)
         ) {
-            Image(
-                painter = painterResource(id = product.imageRes),
+            AsyncImage(
+                model = product.imageUrl, // Gunakan properti imageUrl yang bertipe String
                 contentDescription = product.name,
-                contentScale = ContentScale.Crop,
+                contentScale = ContentScale.Crop, // Agar gambar pas dengan ukuran
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(1f)
+                    .size(100.dp) // sesuaikan modifier dengan kebutuhan Anda
                     .clip(RoundedCornerShape(8.dp))
+                    .background(Color.LightGray) // Placeholder saat gambar sedang dimuat
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
@@ -144,7 +154,7 @@ fun ProductCard(product: Product) {
                 fontWeight = FontWeight.Normal
             )
             Text(
-                text = product.price,
+                text = formatCurrency.format(product.price),
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Bold
             )

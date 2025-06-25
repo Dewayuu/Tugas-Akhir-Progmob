@@ -58,7 +58,7 @@ class Register : ComponentActivity() {
                     },
                     onRegisterSuccess = {
                         // Navigasi ke halaman utama setelah register berhasil
-                        startActivity(Intent(this, HomePage::class.java))
+                        startActivity(Intent(this, MainActivity::class.java))
                         finishAffinity() // Hapus semua activity sebelumnya
                     }
                 )

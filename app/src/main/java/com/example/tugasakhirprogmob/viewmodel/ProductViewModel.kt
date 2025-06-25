@@ -94,7 +94,7 @@ class ProductViewModel : ViewModel() {
         description: String,
         imageUri: Uri?
     ) {
-        if (name.isBlank() || priceStr.isBlank() || imageUri == null) {
+        if (name.isBlank() || priceStr.isBlank()) {
             Log.e("ProductViewModel", "Validation failed: Missing fields.")
             return
         }
@@ -110,11 +110,11 @@ class ProductViewModel : ViewModel() {
                 return@launch
             }
 
-            try {
-                val imageUrl = uploadProductImage(imageUri)
-                if(imageUrl.isEmpty()) {
-                    throw Exception("Image upload failed.")
-                }
+//            try {
+//                val imageUrl = uploadProductImage(imageUri)
+//                if(imageUrl.isEmpty()) {
+//                    throw Exception("Image upload failed.")
+//                }
 
                 // Gunakan ProductRequest untuk membuat produk baru
                 val newProduct = ProductRequest(
@@ -123,7 +123,7 @@ class ProductViewModel : ViewModel() {
                     brand = brand,
                     category = category,
                     description = description,
-                    imageUrl = imageUrl,
+                    imageUrl = "test",
                     sellerId = currentUser.uid,
                     // Ambil nama dari profil pengguna jika tersedia
                     sellerName = currentUser.displayName.takeIf { !it.isNullOrBlank() } ?: "Anonymous Seller"
@@ -134,11 +134,11 @@ class ProductViewModel : ViewModel() {
                 Log.d("ProductViewModel", "Product added successfully to Firestore.")
                 _isSuccess.value = true
 
-            } catch (e: Exception) {
-                Log.e("ProductViewModel", "Error adding product", e)
-            } finally {
-                _isLoading.value = false
-            }
+//            } catch (e: Exception) {
+//                Log.e("ProductViewModel", "Error adding product", e)
+//            } finally {
+//                _isLoading.value = false
+//            }
         }
     }
 

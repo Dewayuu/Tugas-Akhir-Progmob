@@ -88,5 +88,8 @@ dependencies {
     implementation ("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.1")
     implementation ("androidx.activity:activity-compose:1.9.0")
     implementation ("androidx.compose.material:material-icons-extended-android:1.6.8")
+    implementation ("androidx.constraintlayout:constraintlayout-compose:1.1.0")
+
+
 
 }

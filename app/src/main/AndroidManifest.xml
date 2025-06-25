@@ -12,6 +12,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.TugasAkhirProgmob"
         tools:targetApi="31">
+
         <activity android:name=".ProductDetailPage" android:exported="true" android:label="ProductDetailPage" android:theme="@style/Theme.TugasAkhirProgmob">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>

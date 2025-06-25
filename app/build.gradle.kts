@@ -48,6 +48,7 @@ dependencies {
     implementation(libs.material)
     implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
+    implementation(libs.coil.compose)
     kapt(libs.dagger.hilt.compiler)
     // New Kapt for Glide
     kapt(libs.glide.compiler)

@@ -1,4 +1,4 @@
-package com.example.tugasakhirprogmob.ui
+package com.example.tugasakhirprogmob
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background

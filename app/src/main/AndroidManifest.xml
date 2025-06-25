@@ -13,19 +13,27 @@
         android:theme="@style/Theme.TugasAkhirProgmob"
         tools:targetApi="31">
 
-        <activity android:name=".ProductDetailPage" android:exported="true" android:label="ProductDetailPage" android:theme="@style/Theme.TugasAkhirProgmob">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN"/>
-                <category android:name="android.intent.category.LAUNCHER"/>
-            </intent-filter>
+        <activity
+            android:name=".ViewCart" android:exported="true" android:label="@string/app_name" android:theme="@style/Theme.TugasAkhirProgmob">
+                        <intent-filter>
+                            <action android:name="android.intent.action.MAIN" />
+                            <category android:name="android.intent.category.LAUNCHER" />
+                        </intent-filter>
         </activity>
-        <activity android:name=".SearchPage" android:exported="true" android:label="SearchPage" android:theme="@style/Theme.TugasAkhirProgmob">
+
+        <activity android:name=".ProductDetailPage" android:exported="true" android:label="@string/app_name" android:theme="@style/Theme.TugasAkhirProgmob">
+<!--            <intent-filter>-->
+<!--                <action android:name="android.intent.action.MAIN"/>-->
+<!--                <category android:name="android.intent.category.LAUNCHER"/>-->
+<!--            </intent-filter>-->
+        </activity>
+        <activity android:name=".SearchPage" android:exported="true" android:label="@string/app_name" android:theme="@style/Theme.TugasAkhirProgmob">
 <!--                         <intent-filter>-->
 <!--                             <action android:name="android.intent.action.MAIN" />-->
 <!--                             <category android:name="android.intent.category.LAUNCHER" />-->
 <!--                         </intent-filter>-->
         </activity>
-        <activity android:name=".HomePage" android:exported="true" android:label="HomePage" android:theme="@style/Theme.TugasAkhirProgmob">
+        <activity android:name=".HomePage" android:exported="true" android:label="@string/app_name" android:theme="@style/Theme.TugasAkhirProgmob">
 <!--                         <intent-filter>-->
 <!--                             <action android:name="android.intent.action.MAIN" />-->
 <!--                             <category android:name="android.intent.category.LAUNCHER" />-->

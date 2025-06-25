@@ -45,7 +45,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.IconButton
 
-// Anda bisa membuat activity baru untuk halaman pencarian
 class SearchPage : ComponentActivity() {
     private val viewModel: SearchViewModel by viewModels()
 

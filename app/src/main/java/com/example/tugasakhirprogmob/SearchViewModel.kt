@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-// Data produk lengkap (seharusnya dari database atau API, tapi kita hardcode di sini)
+// Data produk lengkap
 val allProducts = listOf(
     Product("Nike", "Basic Jacket", "$10.99", R.drawable.nike),
     Product("Uniqlo", "Parka Hoodie", "$10.99", R.drawable.nike),

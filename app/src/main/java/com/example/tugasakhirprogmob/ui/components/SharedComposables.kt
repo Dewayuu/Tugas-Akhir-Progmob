@@ -31,7 +31,7 @@ import androidx.compose.runtime.getValue
 
 @Composable
 fun BottomNavBar(navController: NavController) {
-    // Daftar item navigasi kita
+    // Daftar item navigasi kita dari class Screen
     val items = listOf(
         Screen.Home,
         Screen.Search,
@@ -39,44 +39,38 @@ fun BottomNavBar(navController: NavController) {
         Screen.Profile
     )
 
-    // Daftar ikon yang sesuai (outline dan filled)
     val icons = mapOf(
         Screen.Home to Pair(R.drawable.home_outline, R.drawable.home_filled),
-        Screen.Search to Pair(R.drawable.search2, R.drawable.search2),
-        Screen.Add to Pair(R.drawable.add, R.drawable.add),
-        Screen.Profile to Pair(R.drawable.profile, R.drawable.profile)
+        Screen.Search to Pair(R.drawable.search2, R.drawable.search_filled),
+        Screen.Add to Pair(R.drawable.add, R.drawable.add_filled),
+        Screen.Profile to Pair(R.drawable.profile, R.drawable.profile_filled)
     )
+    // ----------------------
 
     NavigationBar {
-        // Mengambil info rute saat ini dari NavController
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentRoute = navBackStackEntry?.destination?.route
 
         items.forEach { screen ->
+            val isSelected = currentRoute == screen.route
+            val iconPair = icons[screen] ?: return@forEach // Ambil pasangan ikon, lewati jika tidak ada
+
             NavigationBarItem(
-                selected = currentRoute == screen.route,
+                selected = isSelected,
                 onClick = {
                     navController.navigate(screen.route) {
-                        // Pop up to the start destination of the graph to
-                        // avoid building up a large stack of destinations
-                        // on the back stack as users select items
-                        popUpTo(navController.graph.startDestinationId) {
-                            saveState = true
-                        }
-                        // Avoid multiple copies of the same destination when
-                        // reselecting the same item
+                        popUpTo(navController.graph.startDestinationId) { saveState = true }
                         launchSingleTop = true
-                        // Restore state when reselecting a previously selected item
                         restoreState = true
                     }
                 },
                 icon = {
-                    val iconPair = icons[screen]!!
                     Image(
                         painter = painterResource(
-                            id = if (currentRoute == screen.route) iconPair.second else iconPair.first
+                            // Logika untuk memilih ikon filled atau outline
+                            id = if (isSelected) iconPair.second else iconPair.first
                         ),
-                        contentDescription = null,
+                        contentDescription = screen.route,
                         modifier = Modifier.size(24.dp)
                     )
                 },

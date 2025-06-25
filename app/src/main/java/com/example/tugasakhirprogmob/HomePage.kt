@@ -652,84 +652,84 @@ fun CategoryRow() {
 //    }
 //}
 
-@Composable
-fun BottomNavBar() {
-    val selectedIndex = remember { mutableStateOf(0) }
-
-    NavigationBar {
-        NavigationBarItem(
-            selected = selectedIndex.value == 0,
-            onClick = { selectedIndex.value = 0 },
-            icon = {
-                Image(
-                    painter = painterResource(
-                        id = if (selectedIndex.value == 0) R.drawable.home_filled
-                        else R.drawable.home_outline
-                    ),
-                    contentDescription = null,
-                    modifier = Modifier.size(24.dp)
-                )
-            },
-            colors = NavigationBarItemDefaults.colors(
-                indicatorColor = Color.Transparent
-            )
-        )
-
-        NavigationBarItem(
-            selected = selectedIndex.value == 1,
-            onClick = { selectedIndex.value = 1 },
-            icon = {
-                Image(
-                    painter = painterResource(
-                        id = if (selectedIndex.value == 1) R.drawable.search2
-                        else R.drawable.search2
-                    ),
-                    contentDescription = null,
-                    modifier = Modifier.size(24.dp)
-                )
-            },
-            colors = NavigationBarItemDefaults.colors(
-                indicatorColor = Color.Transparent
-            )
-        )
-
-        NavigationBarItem(
-            selected = selectedIndex.value == 2,
-            onClick = { selectedIndex.value = 2 },
-            icon = {
-                Image(
-                    painter = painterResource(
-                        id = if (selectedIndex.value == 2) R.drawable.add
-                        else R.drawable.add
-                    ),
-                    contentDescription = null,
-                    modifier = Modifier.size(24.dp)
-                )
-            },
-            colors = NavigationBarItemDefaults.colors(
-                indicatorColor = Color.Transparent
-            )
-        )
-
-        NavigationBarItem(
-            selected = selectedIndex.value == 3,
-            onClick = { selectedIndex.value = 3 },
-            icon = {
-                Image(
-                    painter = painterResource(
-                        id = if (selectedIndex.value == 3) R.drawable.profile
-                        else R.drawable.profile
-                    ),
-                    contentDescription = null,
-                    modifier = Modifier.size(24.dp)
-                )
-            },
-            colors = NavigationBarItemDefaults.colors(
-                indicatorColor = Color.Transparent
-            )
-        )
-    }
-}
+//@Composable
+//fun BottomNavBar() {
+//    val selectedIndex = remember { mutableStateOf(0) }
+//
+//    NavigationBar {
+//        NavigationBarItem(
+//            selected = selectedIndex.value == 0,
+//            onClick = { selectedIndex.value = 0 },
+//            icon = {
+//                Image(
+//                    painter = painterResource(
+//                        id = if (selectedIndex.value == 0) R.drawable.home_filled
+//                        else R.drawable.home_outline
+//                    ),
+//                    contentDescription = null,
+//                    modifier = Modifier.size(24.dp)
+//                )
+//            },
+//            colors = NavigationBarItemDefaults.colors(
+//                indicatorColor = Color.Transparent
+//            )
+//        )
+//
+//        NavigationBarItem(
+//            selected = selectedIndex.value == 1,
+//            onClick = { selectedIndex.value = 1 },
+//            icon = {
+//                Image(
+//                    painter = painterResource(
+//                        id = if (selectedIndex.value == 1) R.drawable.search2
+//                        else R.drawable.search2
+//                    ),
+//                    contentDescription = null,
+//                    modifier = Modifier.size(24.dp)
+//                )
+//            },
+//            colors = NavigationBarItemDefaults.colors(
+//                indicatorColor = Color.Transparent
+//            )
+//        )
+//
+//        NavigationBarItem(
+//            selected = selectedIndex.value == 2,
+//            onClick = { selectedIndex.value = 2 },
+//            icon = {
+//                Image(
+//                    painter = painterResource(
+//                        id = if (selectedIndex.value == 2) R.drawable.add
+//                        else R.drawable.add
+//                    ),
+//                    contentDescription = null,
+//                    modifier = Modifier.size(24.dp)
+//                )
+//            },
+//            colors = NavigationBarItemDefaults.colors(
+//                indicatorColor = Color.Transparent
+//            )
+//        )
+//
+//        NavigationBarItem(
+//            selected = selectedIndex.value == 3,
+//            onClick = { selectedIndex.value = 3 },
+//            icon = {
+//                Image(
+//                    painter = painterResource(
+//                        id = if (selectedIndex.value == 3) R.drawable.profile
+//                        else R.drawable.profile
+//                    ),
+//                    contentDescription = null,
+//                    modifier = Modifier.size(24.dp)
+//                )
+//            },
+//            colors = NavigationBarItemDefaults.colors(
+//                indicatorColor = Color.Transparent
+//            )
+//        )
+//    }
+//}
 
 @Preview(showBackground = true)
 @Composable

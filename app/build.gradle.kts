@@ -5,7 +5,7 @@ plugins {
     alias(libs.plugins.navigation.safe.args)
     alias(libs.plugins.dagger.hilt.android)
     alias(libs.plugins.kotlin.kapt)
-    alias(libs.plugins.google.services)
+    id("com.google.gms.google-services") version "4.4.2" apply false
 }
 
 android {
@@ -53,6 +53,16 @@ dependencies {
     // New Kapt for Glide
     kapt(libs.glide.compiler)
 
+    // Firebase Dependencies
+    implementation(platform("com.google.firebase:firebase-bom:33.15.0"))
+
+    // Firestore, Auth, Storage
+    implementation("com.google.firebase:firebase-firestore-ktx")
+    implementation("com.google.firebase:firebase-auth-ktx")
+    implementation("com.google.firebase:firebase-storage-ktx")
+
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.2")
+
     implementation(libs.dagger.hilt.android)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -90,7 +100,7 @@ dependencies {
     implementation ("androidx.activity:activity-compose:1.9.0")
     implementation ("androidx.compose.material:material-icons-extended-android:1.6.8")
     implementation ("androidx.constraintlayout:constraintlayout-compose:1.1.0")
-
+    implementation("io.coil-kt:coil-compose:2.6.0")
 
 
 }

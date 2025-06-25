@@ -12,7 +12,12 @@
           "package_name": "com.example.tugasakhirprogmob"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "86881525332-u2u2hmnesbvouehdmlijba0h3fko1ujn.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyARSB4H2ERw7yQ98uo7IbUx5OCY8Hm6Tjs"
@@ -20,7 +25,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "86881525332-u2u2hmnesbvouehdmlijba0h3fko1ujn.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

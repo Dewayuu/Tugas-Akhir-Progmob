@@ -2,6 +2,7 @@ package com.example.tugasakhirprogmob
 
 import android.net.Uri
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -24,23 +25,32 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.example.tugasakhirprogmob.ui.theme.TugasAkhirProgmobTheme
+import com.example.tugasakhirprogmob.viewmodel.ProductViewModel
 
-// PENTING: Untuk menggunakan AsyncImage, tambahkan dependensi Coil ke file build.gradle.kts (Module: app) Anda:
+// Recheck Dependencies on Gradle:
 // implementation("io.coil-kt:coil-compose:2.6.0")
+// implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.2")
+// implementation(platform("com.google.firebase:firebase-bom:33.1.1"))
+// implementation("com.google.firebase:firebase-firestore-ktx")
+// implementation("com.google.firebase:firebase-auth-ktx")
+// implementation("com.google.firebase:firebase-storage-ktx")
+
 
 class ProductCreatePage : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             TugasAkhirProgmobTheme {
-                ProductCreateScreen(onBackClick = { /* Handle back logic here */ })
+                ProductCreateScreen(onBackClick = { finish()  })
             }
         }
     }
@@ -48,8 +58,13 @@ class ProductCreatePage : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProductCreateScreen(onBackClick: () -> Unit) {
-    // State holders untuk semua input field
+fun ProductCreateScreen(
+    onBackClick: () -> Unit,
+    productViewModel: ProductViewModel = viewModel() // Mengambil instance dari ViewModel
+) {
+    val context = LocalContext.current
+
+    // State holders untuk semua input field UI
     var productName by remember { mutableStateOf("") }
     var askingPrice by remember { mutableStateOf("") }
     var brand by remember { mutableStateOf("") }
@@ -57,11 +72,24 @@ fun ProductCreateScreen(onBackClick: () -> Unit) {
     var selectedCategory by remember { mutableStateOf("Category") }
     var imageUri by remember { mutableStateOf<Uri?>(null) }
 
+    // Mengamati state dari ViewModel
+    val isLoading by productViewModel.isLoading.collectAsState()
+    val isSuccess by productViewModel.isSuccess.collectAsState()
+
     // Launcher untuk memilih gambar dari galeri
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         imageUri = uri
+    }
+
+    // Efek ini akan berjalan ketika `isSuccess` menjadi true
+    LaunchedEffect(isSuccess) {
+        if (isSuccess) {
+            Toast.makeText(context, "Product added successfully!", Toast.LENGTH_SHORT).show()
+            productViewModel.resetSuccessState() // Reset state agar tidak ter-trigger lagi
+            onBackClick() // Kembali ke halaman sebelumnya setelah berhasil
+        }
     }
 
     Scaffold(
@@ -80,105 +108,82 @@ fun ProductCreateScreen(onBackClick: () -> Unit) {
             )
         },
         bottomBar = {
-            // Menggunakan kembali BottomNavBar yang ada, dengan item 'add' yang dipilih
-            // Pastikan Anda memiliki implementasi SearchBottomNavBar di proyek Anda
-             SearchBottomNavBar(selectedItem = 2)
+            // Jika Anda memiliki SearchBottomNavBar, Anda bisa uncomment ini
+            // SearchBottomNavBar(selectedItem = 2)
         },
         containerColor = Color(0xFFF5F5F5)
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .padding(innerPadding)
-                .fillMaxSize()
-        ) {
-            LazyColumn(
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column(
                 modifier = Modifier
-                    .weight(1f) // LazyColumn mengambil semua ruang yang tersedia
-                    .padding(horizontal = 16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                    .padding(innerPadding)
+                    .fillMaxSize()
             ) {
-                item { Spacer(modifier = Modifier.height(8.dp)) }
+                LazyColumn(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    item { Spacer(modifier = Modifier.height(8.dp)) }
 
-                // 1. Image Uploader
-                item {
-                    ImageUploader(
-                        imageUri = imageUri,
-                        onClick = {
-                            // Membuka pemilih gambar
-                            imagePickerLauncher.launch("image/*")
-                        }
-                    )
-                }
+                    item {
+                        ImageUploader(
+                            imageUri = imageUri,
+                            onClick = { imagePickerLauncher.launch("image/*") }
+                        )
+                    }
 
+                    item {
+                        TitledTextField(title = "Product Name", value = productName, onValueChange = { productName = it }, placeholder = "Product Name")
+                    }
 
-                // 2. Product Name
-                item {
-                    TitledTextField(
-                        title = "Product Name",
-                        value = productName,
-                        onValueChange = { productName = it },
-                        placeholder = "Product Name"
-                    )
-                }
+                    item {
+                        TitledTextField(title = "Asking Price", value = askingPrice, onValueChange = { askingPrice = it }, placeholder = "0.00", leadingText = "Rp.", keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+                    }
 
-                // 3. Asking Price
-                item {
-                    TitledTextField(
-                        title = "Asking Price",
-                        value = askingPrice,
-                        onValueChange = { askingPrice = it },
-                        placeholder = "0,000,00",
-                        leadingText = "Rp.",
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                    )
-                }
-
-                // 4. Category & Brand
-                item {
-                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        Box(modifier = Modifier.weight(1f)) {
-                            CategoryDropdown(
-                                selectedCategory = selectedCategory,
-                                onCategorySelected = { selectedCategory = it }
-                            )
-                        }
-                        Box(modifier = Modifier.weight(1f)) {
-                            TitledTextField(
-                                title = "Brand",
-                                value = brand,
-                                onValueChange = { brand = it },
-                                placeholder = "Brand Name"
-                            )
+                    item {
+                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            Box(modifier = Modifier.weight(1f)) {
+                                CategoryDropdown(selectedCategory = selectedCategory, onCategorySelected = { selectedCategory = it })
+                            }
+                            Box(modifier = Modifier.weight(1f)) {
+                                TitledTextField(title = "Brand", value = brand, onValueChange = { brand = it }, placeholder = "Brand Name")
+                            }
                         }
                     }
+
+                    item {
+                        TitledTextField(title = "Description", value = description, onValueChange = { description = it }, placeholder = "Lorem ipsum dolor sit amet...", singleLine = false, modifier = Modifier.height(200.dp))
+                    }
+                    item { Spacer(modifier = Modifier.height(16.dp)) }
                 }
 
-                // 5. Description
-                item {
-                    TitledTextField(
-                        title = "Description",
-                        value = description,
-                        onValueChange = { description = it },
-                        placeholder = "Lorem ipsum dolor sit amet...",
-                        singleLine = false,
-                        modifier = Modifier.height(200.dp)
-                    )
+                Button(
+                    onClick = {
+                        // Memanggil fungsi ViewModel untuk menambah produk
+                        productViewModel.addProduct(
+                            name = productName,
+                            priceStr = askingPrice,
+                            brand = brand,
+                            category = selectedCategory,
+                            description = description,
+                            imageUri = imageUri
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth().padding(16.dp).height(56.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Black),
+                    enabled = !isLoading // Tombol dinonaktifkan saat sedang loading
+                ) {
+                    Text(text = "Add Listing", fontSize = 16.sp, color = Color.White)
                 }
-                item { Spacer(modifier = Modifier.height(16.dp)) }
             }
 
-            // Tombol "Add Listing" di bagian bawah, di atas BottomNavBar
-            Button(
-                onClick = { /* TODO: Handle Add Listing Logic */ },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-                    .height(56.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color.Black)
-            ) {
-                Text(text = "Add Listing", fontSize = 16.sp, color = Color.White)
+            // Menampilkan indikator loading di tengah layar jika isLoading true
+            if (isLoading) {
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             }
         }
     }
@@ -188,27 +193,21 @@ fun ProductCreateScreen(onBackClick: () -> Unit) {
 fun ImageUploader(imageUri: Uri?, onClick: () -> Unit) {
     Box(
         modifier = Modifier
-            .size(500.dp,200.dp)
-            .clip(RoundedCornerShape(16.dp)) // Clip bentuk sebelum border
-            .background(Color.White) // Menambahkan latar belakang putih
-            .border(
-                width = 2.dp,
-                color = Color.LightGray,
-                shape = RoundedCornerShape(16.dp)
-            )
-            .clickable(onClick = onClick), // Gunakan lambda onClick yang diteruskan
+            .size(500.dp, 200.dp) // Ukuran dari file Anda
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color.White)
+            .border(width = 2.dp, color = Color.LightGray, shape = RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
         if (imageUri != null) {
-            // Jika ada gambar yang dipilih, tampilkan
             AsyncImage(
                 model = imageUri,
                 contentDescription = "Selected product image",
                 modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop // Crop agar gambar mengisi Box
+                contentScale = ContentScale.Crop
             )
         } else {
-            // Jika tidak, tampilkan placeholder
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Icon(
                     imageVector = Icons.Default.Add,
@@ -224,13 +223,8 @@ fun ImageUploader(imageUri: Uri?, onClick: () -> Unit) {
 
 @Composable
 fun TitledTextField(
-    title: String,
-    value: String,
-    onValueChange: (String) -> Unit,
-    placeholder: String,
-    modifier: Modifier = Modifier,
-    leadingText: String? = null,
-    singleLine: Boolean = true,
+    title: String, value: String, onValueChange: (String) -> Unit, placeholder: String,
+    modifier: Modifier = Modifier, leadingText: String? = null, singleLine: Boolean = true,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default
 ) {
     Column(
@@ -239,8 +233,7 @@ fun TitledTextField(
     ) {
         Text(text = title, fontWeight = FontWeight.SemiBold)
         OutlinedTextField(
-            value = value,
-            onValueChange = onValueChange,
+            value = value, onValueChange = onValueChange,
             modifier = modifier.fillMaxWidth(),
             placeholder = { Text(text = placeholder, color = Color.Gray) },
             leadingIcon = if (leadingText != null) {
@@ -259,6 +252,7 @@ fun TitledTextField(
         )
     }
 }
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

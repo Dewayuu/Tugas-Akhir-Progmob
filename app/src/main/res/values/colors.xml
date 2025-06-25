@@ -7,6 +7,7 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+<<<<<<< HEAD
 
 
     <color name="g_gray700">#666666</color>
@@ -24,4 +25,9 @@
     <color name="g_gray500">#969899</color>
     <color name="g_orange_yellow">#F8BA00</color>
     <color name="g_green">#11FF00</color>
+=======
+    <color name="g_gray700">#616161</color>
+    <color name="g_black">#000000</color>
+    <color name="g_blue">#3F586A</color>
+>>>>>>> 3a55271eafa4c5576743b30eb3de6be2275b7383
 </resources>

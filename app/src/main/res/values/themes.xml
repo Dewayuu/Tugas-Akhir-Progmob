@@ -1,5 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
+<<<<<<< HEAD
 <resources>
 
     <style name="Theme.FashionPreloved" parent="android:Theme.Material.Light.NoActionBar" />
 </resources>
+=======
+
+    <resources>
+        <style name="Theme.TugasAkhirProgmob" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+            <!-- Kamu bisa tambahkan warna atau font di sini -->
+        </style>
+    </resources>
+>>>>>>> 3a55271eafa4c5576743b30eb3de6be2275b7383

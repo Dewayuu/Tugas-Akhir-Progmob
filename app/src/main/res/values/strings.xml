@@ -1,3 +1,12 @@
 <resources>
+<<<<<<< HEAD
     <string name="app_name">Fashion Pre-loved</string>
 </resources>
+=======
+    <string name="app_name">TugasAkhirProgmob</string>
+
+    <!-- Tambahan untuk contentDescription -->
+    <string name="logo">App Logo</string>
+    <string name="bg_register">Background for Register Page</string>
+</resources>
+>>>>>>> 3a55271eafa4c5576743b30eb3de6be2275b7383

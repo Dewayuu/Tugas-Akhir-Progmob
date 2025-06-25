@@ -1,21 +1,37 @@
 {
   "project_info": {
+<<<<<<< HEAD
     "project_number": "838266212061",
     "project_id": "fashionprelovedtrs",
     "storage_bucket": "fashionprelovedtrs.firebasestorage.app"
+=======
+    "project_number": "86881525332",
+    "project_id": "tugasakhirprogmob",
+    "storage_bucket": "tugasakhirprogmob.firebasestorage.app"
+>>>>>>> 3a55271eafa4c5576743b30eb3de6be2275b7383
   },
   "client": [
     {
       "client_info": {
+<<<<<<< HEAD
         "mobilesdk_app_id": "1:838266212061:android:87009e7973e530521ed534",
         "android_client_info": {
           "package_name": "com.example.fashionpre_loved"
+=======
+        "mobilesdk_app_id": "1:86881525332:android:78323ec0747881150197c1",
+        "android_client_info": {
+          "package_name": "com.example.tugasakhirprogmob"
+>>>>>>> 3a55271eafa4c5576743b30eb3de6be2275b7383
         }
       },
       "oauth_client": [],
       "api_key": [
         {
+<<<<<<< HEAD
           "current_key": "AIzaSyDzVIg30IN8P5hY0uLta5kIiNN6Hhni52o"
+=======
+          "current_key": "AIzaSyARSB4H2ERw7yQ98uo7IbUx5OCY8Hm6Tjs"
+>>>>>>> 3a55271eafa4c5576743b30eb3de6be2275b7383
         }
       ],
       "services": {

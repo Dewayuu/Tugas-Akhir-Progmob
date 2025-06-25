@@ -20,5 +20,9 @@ dependencyResolutionManagement {
     }
 }
 
+<<<<<<< HEAD
 rootProject.name = "FashionPreloved"
+=======
+rootProject.name = "TugasAkhirProgmob"
+>>>>>>> 3a55271eafa4c5576743b30eb3de6be2275b7383
 include(":app")

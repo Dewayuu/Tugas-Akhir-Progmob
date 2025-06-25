@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "838266212061",
+    "project_id": "fashionprelovedtrs",
+    "storage_bucket": "fashionprelovedtrs.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:838266212061:android:87009e7973e530521ed534",
+        "android_client_info": {
+          "package_name": "com.example.fashionpre_loved"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDzVIg30IN8P5hY0uLta5kIiNN6Hhni52o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

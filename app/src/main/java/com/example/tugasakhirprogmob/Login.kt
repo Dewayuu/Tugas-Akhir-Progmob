@@ -1,69 +1,105 @@
 package com.example.tugasakhirprogmob
 
+import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.foundation.Image
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.tugasakhirprogmob.ui.theme.TugasAkhirProgmobTheme
-import androidx.compose.foundation.Image
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.input.PasswordVisualTransformation
+import com.example.tugasakhirprogmob.viewmodel.AuthViewModel
 
 
 class Login : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        // Di dalam rumah ini, kita meletakkan perabotan kita
         setContent {
             TugasAkhirProgmobTheme {
-                // Memanggil fungsi Composable yang sudah Anda buat
-                LoginScreen()
+                LoginScreen(
+                    onSignUpClick = {
+                        // Navigasi ke halaman Register
+                        startActivity(Intent(this, Register::class.java))
+                        finish()
+                    },
+                    onLoginSuccess = {
+                        // Navigasi ke halaman utama setelah login berhasil
+                        startActivity(Intent(this, HomePage::class.java))
+                        finishAffinity() // Hapus semua activity sebelumnya
+                    }
+                )
             }
         }
     }
 }
 
 @Composable
-fun LoginScreen() {
+fun LoginScreen(
+    authViewModel: AuthViewModel = viewModel(),
+    onSignUpClick: () -> Unit,
+    onLoginSuccess: () -> Unit
+) {
+    val context = LocalContext.current
+
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                brush = Brush.verticalGradient(
-                    listOf(
-                        Color(0xFF7BA9C9), // warna atas (rgba(123, 169, 201, 1))
-                        Color(0xFF7A98AC)  // warna bawah (rgba(122, 152, 172, 1))
-                    )
-                )
-            )
-    ) {
-        // Status bar bisa di-skip, nanti icon bisa pakai Image
+    // Mengamati state dari ViewModel
+    val isLoading by authViewModel.isLoading.collectAsState()
+    val authSuccess by authViewModel.authSuccess.collectAsState()
+    val error by authViewModel.error.collectAsState()
+
+    // Menampilkan Toast untuk error
+    LaunchedEffect(error) {
+        error?.let {
+            Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+            authViewModel.resetAuthStatus()
+        }
+    }
+
+    // Navigasi saat login berhasil
+    LaunchedEffect(authSuccess) {
+        if (authSuccess) {
+            Toast.makeText(context, "Login successful!", Toast.LENGTH_SHORT).show()
+            onLoginSuccess()
+            authViewModel.resetAuthStatus()
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
         Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Top,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(24.dp)
+                .background(
+                    brush = Brush.verticalGradient(
+                        listOf(Color(0xFF7BA9C9), Color(0xFF7A98AC))
+                    )
+                )
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
             Spacer(modifier = Modifier.height(40.dp))
 
@@ -109,87 +145,40 @@ fun LoginScreen() {
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Input email
-            BasicTextField(
-                value = email,
-                onValueChange = { email = it },
-                singleLine = true,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp)
-                    .background(Color.White, RoundedCornerShape(8.dp))
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                decorationBox = { innerTextField ->
-                    Box {
-                        if (email.isEmpty()) {
-                            Text(
-                                text = "email@domain.com",
-                                color = Color.Gray,
-                                fontSize = 14.sp
-                            )
-                        }
-                        innerTextField() // di sini teks ketikanmu akan muncul
-                    }
-                }
-            )
-
-
+            // Email Input
+            InputField(value = email, onValueChange = { email = it }, placeholder = "email@domain.com")
             Spacer(modifier = Modifier.height(16.dp))
+            // Password Input
+            InputField(value = password, onValueChange = { password = it }, placeholder = "password", isPassword = true)
+            Spacer(modifier = Modifier.height(24.dp))
 
-            // Input password
-            BasicTextField(
-                value = password,
-                onValueChange = { password = it },
-                singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp)
-                    .background(Color.White, RoundedCornerShape(8.dp))
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                decorationBox = { innerTextField ->
-                    Box {
-                        if (password.isEmpty()) {
-                            Text(
-                                text = "password",
-                                color = Color.Gray,
-                                fontSize = 14.sp
-                            )
-                        }
-                        innerTextField()
-                    }
-                }
-            )
-
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Continue Button
+            // Continue (Login) Button
             Button(
-                onClick = { /* TODO */ },
+                onClick = {
+                    if (email.isBlank() || password.isBlank()) {
+                        Toast.makeText(context, "Email and password cannot be empty", Toast.LENGTH_SHORT).show()
+                        return@Button
+                    }
+                    authViewModel.login(email, password)
+                },
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3F586A)),
                 shape = RoundedCornerShape(8.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp)
+                modifier = Modifier.fillMaxWidth().height(48.dp),
+                enabled = !isLoading
             ) {
-                Text(
-                    text = "Continue",
-                    color = Color.White
-                )
+                Text(text = "Continue", color = Color.White)
             }
-
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Sign up
+            // Link ke Halaman Sign Up
             Text(
-                text = "Or Sign up",
+                text = "Don't have an account? Sign up",
                 color = Color.White,
-                fontSize = 12.sp
+                fontSize = 12.sp,
+                modifier = Modifier.clickable { onSignUpClick() }
             )
 
             Spacer(modifier = Modifier.height(32.dp))
-
             // Divider or
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -252,6 +241,14 @@ fun LoginScreen() {
                 fontSize = 12.sp,
                 textAlign = TextAlign.Center
             )
+
+
+        }
+        if (isLoading) {
+            CircularProgressIndicator(
+                modifier = Modifier.align(alignment = Alignment.Center),
+                color = Color.White
+            )
         }
     }
 }
@@ -260,6 +257,10 @@ fun LoginScreen() {
 @Composable
 fun LoginScreenPreview() {
     TugasAkhirProgmobTheme {
-        LoginScreen()
+        // PERBAIKAN: Berikan nilai kosong untuk parameter lambda di preview
+        LoginScreen(
+            onSignUpClick = {},
+            onLoginSuccess = {}
+        )
     }
 }

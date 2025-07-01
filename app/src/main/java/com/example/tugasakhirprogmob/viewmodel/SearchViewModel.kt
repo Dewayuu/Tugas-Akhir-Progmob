@@ -22,7 +22,7 @@ data class SearchUiState(
     val searchHistory: List<String> = emptyList()
 )
 
-class SearchViewModel : ViewModel() {
+open class SearchViewModel : ViewModel() {
 
     private val db = Firebase.firestore
     private val _uiState = MutableStateFlow(SearchUiState())
@@ -98,6 +98,16 @@ class SearchViewModel : ViewModel() {
                 isSearching = false, // Tutup tampilan histori
                 displayedProducts = filteredList,
                 searchHistory = currentHistory.take(10) // Batasi riwayat hingga 10 item
+            )
+        }
+    }
+    fun resetSearchState() {
+        // Fungsi ini akan mengembalikan state ke kondisi awal
+        _uiState.update {
+            it.copy(
+                searchQuery = "",
+                displayedProducts = allProductsCache,
+                isSearching = false // Juga reset tampilan histori/fokus
             )
         }
     }

@@ -51,8 +51,12 @@ fun SearchScreen(
     uiState: SearchUiState,
     onQueryChange: (String) -> Unit,
     onSearch: (String) -> Unit,
-    onSearchFocusChange: () -> Unit
+    onSearchFocusChange: () -> Unit,
+    onScreenVisible: () -> Unit
 ) {
+    LaunchedEffect(Unit) {
+        onScreenVisible()
+    }
     // Ambil state dan fungsi dari ViewModel
 //    val uiState by viewModel.uiState.collectAsState()
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -202,8 +206,7 @@ fun SearchTopBar(
 
         // --- IKON KERANJANG DITAMBAHKAN DI SINI ---
         Spacer(modifier = Modifier.width(8.dp))
-        IconButton(onClick = { onCartClick }) {
-            Icon(
+        IconButton(onClick = onCartClick) {            Icon(
                 painter = painterResource(id = R.drawable.cart),
                 contentDescription = "Cart",
                 modifier = Modifier.size(28.dp) // Ukuran ikon disamakan
@@ -276,7 +279,8 @@ fun SearchScreenPreview() {
             uiState = dummyUiState,
             onQueryChange = {},
             onSearch = {},
-            onSearchFocusChange = {}
+            onSearchFocusChange = {},
+            onScreenVisible = {}
         )
     }
 }

@@ -58,7 +58,10 @@ fun MainApp() {
         startDestination = Screen.Home.route
     ) {
         composable(Screen.Home.route) {
-            HomeScreen(navController = navController)
+            HomeScreen(
+                navController = navController,
+                searchViewModel = searchViewModel
+            )
         }
         composable(Screen.Add.route) {
             ProductCreateScreen(
@@ -67,14 +70,15 @@ fun MainApp() {
             )
         }
         composable(Screen.SearchScreen.route) {
-            val searchViewModel: SearchViewModel = viewModel()
+//            val searchViewModel: SearchViewModel = viewModel()
             val uiState by searchViewModel.uiState.collectAsStateWithLifecycle()
             SearchScreen(
                 navController = navController,
                 uiState = uiState,
                 onQueryChange = searchViewModel::onSearchQueryChanged,
                 onSearch = searchViewModel::executeSearch,
-                onSearchFocusChange = searchViewModel::onSearchFocused
+                onSearchFocusChange = searchViewModel::onSearchFocused,
+                onScreenVisible = { searchViewModel.resetSearchState() }
             )
         }
         composable(Screen.Cart.route) {
@@ -94,7 +98,8 @@ fun MainApp() {
 @Composable
 fun HomeScreen(
     navController: NavController,
-    productViewModel: ProductViewModel = viewModel()
+    productViewModel: ProductViewModel = viewModel(),
+    searchViewModel: SearchViewModel
 ) {
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
@@ -102,12 +107,13 @@ fun HomeScreen(
     // --- STATE DARI VIEWMODEL (TIDAK BERUBAH) ---
     val realProducts by productViewModel.products.collectAsStateWithLifecycle()
     val isLoading by productViewModel.isLoading.collectAsStateWithLifecycle()
+    val searchUiState by searchViewModel.uiState.collectAsStateWithLifecycle()
 
     // --- LOGIKA UNTUK FITUR PENCARIAN (TIDAK BERUBAH) ---
     // Logika ini sudah benar dan dipertahankan.
     var searchQuery by remember { mutableStateOf("") }
     var isSearchBarFocused by remember { mutableStateOf(false) }
-    var searchHistory by rememberSaveable { mutableStateOf<List<String>>(emptyList()) }
+    // var searchHistory by rememberSaveable { mutableStateOf<List<String>>(emptyList()) }
     var searchExecuted by remember { mutableStateOf(false) }
 
     val displayedProducts = if (searchExecuted) {
@@ -124,18 +130,13 @@ fun HomeScreen(
         keyboardController?.hide()
         focusManager.clearFocus()
 
-        if (trimmedQuery.isNotBlank()) {
-            if (!searchHistory.contains(trimmedQuery)) {
-                searchHistory = (listOf(trimmedQuery) + searchHistory).take(10)
-            }
-            searchQuery = trimmedQuery
-            searchExecuted = true
-            isSearchBarFocused = false
-        } else {
-            searchQuery = ""
-            searchExecuted = false
-            isSearchBarFocused = false
-        }
+        // Delegasikan proses pencarian & penyimpanan riwayat ke ViewModel
+        searchViewModel.executeSearch(trimmedQuery)
+
+        // Tetap kelola state lokal untuk mengontrol UI di HomePage
+        searchQuery = trimmedQuery
+        searchExecuted = trimmedQuery.isNotBlank()
+        isSearchBarFocused = false
     }
     // --- AKHIR DARI LOGIKA PENCARIAN ---
 
@@ -150,6 +151,8 @@ fun HomeScreen(
                 query = searchQuery,
                 onQueryChange = {
                     searchQuery = it
+                    // Update juga query di ViewModel agar tetap sinkron
+                    searchViewModel.onSearchQueryChanged(it)
                     if (it.isBlank()) {
                         searchExecuted = false
                     }
@@ -178,10 +181,12 @@ fun HomeScreen(
             }
             // --- LOGIKA TAMPILAN DINAMIS (MENGGUNAKAN SHARED COMPOSABLES) ---
             else if (isSearchBarFocused) {
-                // --- MENGGUNAKAN SearchHistoryView DARI SHARED COMPOSABLES ---
                 SearchHistoryView(
-                    history = searchHistory,
-                    onHistoryClick = { historyTerm -> performSearch(historyTerm) }
+                    history = searchUiState.searchHistory,
+                    onHistoryClick = { historyTerm ->
+                        searchQuery = historyTerm // Update text di search bar
+                        performSearch(historyTerm)
+                    }
                 )
             } else if (searchExecuted) {
                 SearchResultsUI(
@@ -399,8 +404,18 @@ fun CategoryRow() {
 @Preview(showBackground = true)
 @Composable
 fun HomeScreenPreview() {
+    // SearchViewModel yang asli memanggil Firebase saat dibuat, yang akan crash di mode preview.
+    // Kita buat ViewModel palsu (fake) yang tidak melakukan apa-apa khusus untuk preview.
+    val fakeSearchViewModel = object : SearchViewModel() {
+        // Meng-override init block agar tidak memanggil fetchAllProducts()
+    }
+
     TugasAkhirProgmobTheme {
         val dummyNavController = rememberNavController()
-        HomeScreen(navController = dummyNavController)
+        HomeScreen(
+            navController = dummyNavController,
+            // Berikan ViewModel palsu yang sudah kita buat ke dalam parameter
+            searchViewModel = fakeSearchViewModel
+        )
     }
 }

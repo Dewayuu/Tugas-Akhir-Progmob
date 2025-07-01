@@ -19,9 +19,12 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import com.example.tugasakhirprogmob.ui.components.BottomNavBar
 import com.example.tugasakhirprogmob.ui.theme.TugasAkhirProgmobTheme
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.navigation.compose.rememberNavController
+
 
 // Nama fungsi diubah dan sekarang menerima NavController
 @Composable
@@ -45,13 +48,50 @@ fun UserProfileScreen(navController: NavController) {
                 )
             )
 
-            // Profile Card
+            // 🔍 Search Bar
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 12.dp)
+                    .background(Color.White, RoundedCornerShape(24.dp))
+                    .height(48.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Spacer(modifier = Modifier.width(12.dp))
+                Icon(Icons.Default.Search, contentDescription = "Search", tint = Color.Gray)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Search Edge", color = Color.Gray, modifier = Modifier.weight(1f))
+                IconButton(onClick = { /* TODO: go to cart */ }) {
+                    Icon(Icons.Default.ShoppingCart, contentDescription = "Cart")
+                }
+            }
+
+            // 🧷 Filter Buttons
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp)
+                    .horizontalScroll(rememberScrollState())
+            ) {
+                listOf("Filters", "Jacket", "Women’s Clothing").forEach {
+                    AssistChip(
+                        onClick = { /* TODO */ },
+                        label = { Text(it) },
+                        modifier = Modifier.padding(end = 8.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // 👤 Profile Card
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 12.dp),
                 shape = RoundedCornerShape(12.dp),
-                elevation = CardDefaults.cardElevation(4.dp)
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(2.dp)
             ) {
                 Row(modifier = Modifier.padding(16.dp)) {
                     Icon(
@@ -68,20 +108,27 @@ fun UserProfileScreen(navController: NavController) {
                         Text("User A", style = MaterialTheme.typography.titleMedium)
                         Text("Denpasar", style = MaterialTheme.typography.bodySmall)
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Star, contentDescription = null, tint = Color.Yellow)
+                            Icon(Icons.Default.Star, contentDescription = null, tint = Color.Yellow, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("4.5 • 3 Reviews", style = MaterialTheme.typography.bodySmall)
+                            Text("4.5", style = MaterialTheme.typography.bodySmall)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("• 3 Reviews", style = MaterialTheme.typography.bodySmall)
                         }
                         Text("2y, 4mo Joined", style = MaterialTheme.typography.bodySmall)
                     }
                     Column(horizontalAlignment = Alignment.End) {
-                        IconButton(onClick = { /* TODO: Navigasi ke halaman edit profil */ }) {
+                        IconButton(onClick = { /* TODO: Go to edit profile */ }) {
                             Icon(Icons.Default.Edit, contentDescription = "Edit")
                         }
                         Row {
-                            Box(modifier = Modifier.size(24.dp).background(Color.LightGray, shape = RoundedCornerShape(4.dp)))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Box(modifier = Modifier.size(24.dp).background(Color.LightGray, shape = RoundedCornerShape(4.dp)))
+                            repeat(2) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(24.dp)
+                                        .background(Color.LightGray, shape = RoundedCornerShape(4.dp))
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                            }
                         }
                     }
                 }
@@ -89,12 +136,14 @@ fun UserProfileScreen(navController: NavController) {
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // About Card
+            // ℹ️ About Card
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 12.dp),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(2.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("About", style = MaterialTheme.typography.titleMedium)
@@ -104,12 +153,14 @@ fun UserProfileScreen(navController: NavController) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Listing Card
+            // 📦 Listing Card
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 12.dp, end = 12.dp, bottom = 24.dp),
-                shape = RoundedCornerShape(12.dp)
+                    .padding(horizontal = 12.dp, vertical = 12.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(2.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("Listing", style = MaterialTheme.typography.titleMedium)
@@ -119,11 +170,11 @@ fun UserProfileScreen(navController: NavController) {
                             .size(120.dp)
                             .clip(RoundedCornerShape(16.dp))
                             .background(Color.LightGray)
-                            .clickable { /* TODO: Navigasi ke halaman 'Add Product' */ },
+                            .clickable { /* TODO: Go to Add Product screen */ },
                         contentAlignment = Alignment.Center
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(imageVector = Icons.Default.Add, contentDescription = "Add", modifier = Modifier.size(24.dp))
+                            Icon(Icons.Default.Add, contentDescription = "Add", modifier = Modifier.size(24.dp))
                             Text("Start Selling")
                         }
                     }
@@ -132,7 +183,6 @@ fun UserProfileScreen(navController: NavController) {
         }
     }
 }
-
 @Preview(showBackground = true)
 @Composable
 fun UserProfileScreenPreview() {
@@ -141,3 +191,7 @@ fun UserProfileScreenPreview() {
         UserProfileScreen(navController = rememberNavController())
     }
 }
+
+
+
+

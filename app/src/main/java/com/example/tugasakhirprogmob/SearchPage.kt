@@ -66,7 +66,8 @@ fun SearchScreen(
                     onSearch(query)
                     keyboardController?.hide()
                 },
-                onFocusChange = onSearchFocusChange
+                onFocusChange = onSearchFocusChange,
+                onCartClick = { navController.navigate(Screen.Cart.route) }
             )
         },
         bottomBar = { BottomNavBar(navController = navController) },
@@ -151,47 +152,64 @@ fun SearchTopBar(
     query: String,
     onQueryChange: (String) -> Unit,
     onSearch: (String) -> Unit,
-    onFocusChange: () -> Unit
+    onFocusChange: () -> Unit,
+    onCartClick: () -> Unit
 ) {
     val keyboardController = LocalSoftwareKeyboardController.current
 
-    Surface(color = Color.White, shadowElevation = 4.dp) {
-        Row(
+    // Menggunakan Row, bukan Surface, agar konsisten dengan HomePage
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp), // Padding yang sama dengan HomePage
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        OutlinedTextField(
+            value = query,
+            onValueChange = onQueryChange,
+            placeholder = { Text("Search Edge...") }, // Placeholder disamakan
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            OutlinedTextField(
-                value = query,
-                onValueChange = onQueryChange,
-                placeholder = { Text("Cari Jaket, Parka...") },
-                modifier = Modifier
-                    .weight(1f)
-                    .onFocusChanged { focusState ->
-                        if (focusState.isFocused) {
-                            onFocusChange()
-                        }
-                    },
-                leadingIcon = {
-                    Icon(
-                        painter = painterResource(id = R.drawable.search),
-                        contentDescription = "Search Icon"
-                    )
+                .weight(1f)
+                .height(56.dp) // Tinggi disamakan
+                .onFocusChanged { focusState ->
+                    if (focusState.isFocused) {
+                        onFocusChange()
+                    }
                 },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(onSearch = {
-                    keyboardController?.hide()
-                    onSearch(query)
-                }),
-                shape = RoundedCornerShape(28.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    unfocusedBorderColor = Color.LightGray,
-                    focusedBorderColor = Color.DarkGray
+            shape = RoundedCornerShape(12.dp), // Bentuk sudut disamakan
+            leadingIcon = {
+                Icon(
+                    painter = painterResource(id = R.drawable.search),
+                    contentDescription = "Search Icon",
+                    modifier = Modifier.size(26.dp) // Ukuran ikon disamakan
                 )
+            },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            keyboardActions = KeyboardActions(onSearch = {
+                keyboardController?.hide()
+                onSearch(query)
+            }),
+            // Warna disamakan dengan TopBar di HomePage
+            colors = OutlinedTextFieldDefaults.colors(
+                unfocusedContainerColor = Color(0xFFF0F0F0),
+                focusedContainerColor = Color.White,
+                focusedBorderColor = Color.Gray,
+                unfocusedBorderColor = Color.Transparent,
+                cursorColor = Color.Black
+            )
+        )
+
+        // --- IKON KERANJANG DITAMBAHKAN DI SINI ---
+        Spacer(modifier = Modifier.width(8.dp))
+        IconButton(onClick = { onCartClick }) {
+            Icon(
+                painter = painterResource(id = R.drawable.cart),
+                contentDescription = "Cart",
+                modifier = Modifier.size(28.dp) // Ukuran ikon disamakan
             )
         }
+        // -----------------------------------------
     }
 }
 

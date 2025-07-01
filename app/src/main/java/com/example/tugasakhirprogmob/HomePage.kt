@@ -33,7 +33,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.example.tugasakhirprogmob.ui.components.BottomNavBar
+import com.example.tugasakhirprogmob.ui.components.*
 import com.example.tugasakhirprogmob.ui.theme.TugasAkhirProgmobTheme
 import com.example.tugasakhirprogmob.viewmodel.Product
 import com.example.tugasakhirprogmob.viewmodel.ProductViewModel
@@ -42,6 +42,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import java.text.NumberFormat
 import java.util.Locale
+import androidx.compose.runtime.saveable.rememberSaveable
 
 
 // Wrapper utama aplikasi dengan Navigasi.
@@ -50,6 +51,8 @@ import java.util.Locale
 @Composable
 fun MainApp() {
     val navController = rememberNavController()
+    val searchViewModel: SearchViewModel = viewModel()
+
     NavHost(
         navController = navController,
         startDestination = Screen.Home.route
@@ -81,7 +84,9 @@ fun MainApp() {
                 }
             )
         }
-
+        composable(Screen.Profile.route) {
+            UserProfileScreen(navController = navController)
+        }
     }
 }
 
@@ -91,7 +96,6 @@ fun HomeScreen(
     navController: NavController,
     productViewModel: ProductViewModel = viewModel()
 ) {
-    val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
 
@@ -99,10 +103,11 @@ fun HomeScreen(
     val realProducts by productViewModel.products.collectAsStateWithLifecycle()
     val isLoading by productViewModel.isLoading.collectAsStateWithLifecycle()
 
-    // --- START: KODE UNTUK FITUR PENCARIAN ---
+    // --- LOGIKA UNTUK FITUR PENCARIAN (TIDAK BERUBAH) ---
+    // Logika ini sudah benar dan dipertahankan.
     var searchQuery by remember { mutableStateOf("") }
     var isSearchBarFocused by remember { mutableStateOf(false) }
-    var searchHistory by remember { mutableStateOf<List<String>>(emptyList()) }
+    var searchHistory by rememberSaveable { mutableStateOf<List<String>>(emptyList()) }
     var searchExecuted by remember { mutableStateOf(false) }
 
     val displayedProducts = if (searchExecuted) {
@@ -132,7 +137,7 @@ fun HomeScreen(
             isSearchBarFocused = false
         }
     }
-    // --- END: KODE UNTUK FITUR PENCARIAN ---
+    // --- AKHIR DARI LOGIKA PENCARIAN ---
 
     LaunchedEffect(Unit) {
         productViewModel.fetchProducts()
@@ -140,7 +145,7 @@ fun HomeScreen(
 
     Scaffold(
         topBar = {
-            // --- TOPBAR DIGANTI DENGAN VERSI YANG MEMILIKI SEARCH BAR ---
+            // --- MENGGUNAKAN TopBar DARI SHARED COMPOSABLES ---
             TopBar(
                 query = searchQuery,
                 onQueryChange = {
@@ -156,6 +161,7 @@ fun HomeScreen(
         },
         bottomBar = {
             if (!isSearchBarFocused && !searchExecuted) {
+                // --- MENGGUNAKAN BottomNavBar DARI SHARED COMPOSABLES ---
                 BottomNavBar(navController = navController)
             }
         }
@@ -165,14 +171,14 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Tampilkan loading indicator hanya di awal
             if (isLoading && realProducts.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
             }
-            // --- LOGIKA TAMPILAN DINAMIS UNTUK PENCARIAN ---
+            // --- LOGIKA TAMPILAN DINAMIS (MENGGUNAKAN SHARED COMPOSABLES) ---
             else if (isSearchBarFocused) {
+                // --- MENGGUNAKAN SearchHistoryView DARI SHARED COMPOSABLES ---
                 SearchHistoryView(
                     history = searchHistory,
                     onHistoryClick = { historyTerm -> performSearch(historyTerm) }
@@ -196,48 +202,10 @@ fun HomeScreen(
     }
 }
 
-// --- TOPBAR BARU DENGAN SEARCHFIELD ---
-@Composable
-fun TopBar(
-    query: String,
-    onQueryChange: (String) -> Unit,
-    onSearch: (String) -> Unit,
-    onFocusChange: (Boolean) -> Unit,
-    onCartClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        OutlinedTextField(
-            value = query,
-            onValueChange = onQueryChange,
-            placeholder = { Text("Search Edge...") },
-            modifier = Modifier.weight(1f).height(56.dp).onFocusChanged { onFocusChange(it.isFocused) },
-            shape = RoundedCornerShape(12.dp),
-            leadingIcon = { Icon(painterResource(id = R.drawable.search), contentDescription = null, modifier = Modifier.size(26.dp)) },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            keyboardActions = KeyboardActions(onSearch = { onSearch(query) }),
-            colors = OutlinedTextFieldDefaults.colors(
-                unfocusedContainerColor = Color(0xFFF0F0F0),
-                focusedContainerColor = Color.White,
-                focusedBorderColor = Color.Gray,
-                unfocusedBorderColor = Color.Transparent,
-                cursorColor = Color.Black
-            )
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        IconButton(onClick = onCartClick) {
-            Icon(painterResource(id = R.drawable.cart), contentDescription = "Cart", modifier = Modifier.size(28.dp))
-        }
-    }
-}
 
-
-// --- KONTEN-KONTEN SCREEN (DIPISAHKAN AGAR LEBIH RAPI) ---
-// Composable-composable di bawah ini bisa Anda pindahkan ke file lain jika mau,
-// tapi tidak masalah jika tetap di sini.
+// --- KONTEN-KONTEN SCREEN ---
+// Composable di bawah ini spesifik untuk HomePage, jadi tetap di sini.
+// Namun, sekarang ia memanggil ProductCard dari SharedComposables.
 
 @Composable
 fun DefaultHomeScreenContent(products: List<Product>, navController: NavController) {
@@ -265,6 +233,7 @@ fun DefaultHomeScreenContent(products: List<Product>, navController: NavControll
             ) {
                 productRow.forEach { product ->
                     Box(modifier = Modifier.weight(1f)) {
+                        // --- MENGGUNAKAN ProductCard DARI SHARED COMPOSABLES ---
                         ProductCard(product = product, navController = navController)
                     }
                 }
@@ -286,14 +255,14 @@ fun SearchResultsUI(query: String, products: List<Product>, navController: NavCo
                 onClick = onDismiss
             )
     ) {
+        // --- MENGGUNAKAN SearchResultsHeader DARI SHARED COMPOSABLES ---
         SearchResultsHeader(query = query)
 
         if (products.isEmpty()) {
-            // JIKA KOSONG: Tampilkan pesan "Product not found"
             Box(
                 modifier = Modifier
-                    .weight(1f) // Mengambil sisa tinggi
-                    .fillMaxWidth(), // <-- TAMBAHKAN INI AGAR BOX MENJADI LEBAR
+                    .weight(1f)
+                    .fillMaxWidth(),
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -317,7 +286,6 @@ fun SearchResultsUI(query: String, products: List<Product>, navController: NavCo
                 }
             }
         } else {
-            // JIKA ADA ISINYA: Tampilkan grid produk
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(8.dp)
@@ -331,6 +299,7 @@ fun SearchResultsUI(query: String, products: List<Product>, navController: NavCo
                     ) {
                         productRow.forEach { product ->
                             Box(modifier = Modifier.weight(1f)) {
+                                // --- MENGGUNAKAN ProductCard DARI SHARED COMPOSABLES ---
                                 ProductCard(product = product, navController = navController)
                             }
                         }

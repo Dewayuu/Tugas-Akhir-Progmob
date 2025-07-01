@@ -19,7 +19,7 @@ data class SearchUiState(
     val isSearching: Boolean = false, // True jika search bar sedang fokus
     val isLoading: Boolean = false,
     val displayedProducts: List<Product> = emptyList(),
-    val searchHistory: List<String> = listOf("Jacket", "Nike", "T-Shirt") // Riwayat pencarian awal
+    val searchHistory: List<String> = emptyList()
 )
 
 class SearchViewModel : ViewModel() {

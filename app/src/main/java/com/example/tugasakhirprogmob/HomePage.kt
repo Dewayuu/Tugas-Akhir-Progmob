@@ -91,7 +91,8 @@ fun MainApp() {
         composable(Screen.Profile.route) {
             UserProfileScreen(
                 navController = navController,
-                onCartClick = { navController.navigate(Screen.Cart.route) }
+                onCartClick = { navController.navigate(Screen.Cart.route) },
+                searchViewModel = searchViewModel
             )
         }
     }

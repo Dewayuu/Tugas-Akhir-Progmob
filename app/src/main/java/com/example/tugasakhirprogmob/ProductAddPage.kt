@@ -43,7 +43,8 @@ import com.example.tugasakhirprogmob.viewmodel.ProductViewModel
 fun ProductCreateScreen(
     navController: NavController,
     onBackClick: () -> Unit,
-    productViewModel: ProductViewModel = viewModel() // Mengambil instance dari ViewModel
+    productViewModel: ProductViewModel
+//    productViewModel: ProductViewModel = viewModel() // Mengambil instance dari ViewModel
 ) {
     val context = LocalContext.current
 
@@ -324,9 +325,11 @@ fun CategoryDropdown(
 fun ProductCreateScreenPreview() {
     TugasAkhirProgmobTheme {
         val dummyNavController = rememberNavController()
+        val fakeProductViewModel = ProductViewModel()
         ProductCreateScreen(
             navController = dummyNavController,
-            onBackClick = {}
+            onBackClick = {},
+            productViewModel = fakeProductViewModel
         )
     }
 }

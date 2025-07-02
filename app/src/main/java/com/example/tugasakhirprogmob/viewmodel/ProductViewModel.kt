@@ -30,6 +30,10 @@ import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import com.google.firebase.firestore.ListenerRegistration
+import com.google.firebase.auth.FirebaseAuth
+
+
 
 // Data class yang dipetakan ke dokumen di Firestore
 // Properti dibuat nullable agar bisa di-map dari Firestore dengan aman
@@ -69,8 +73,29 @@ class ProductViewModel : ViewModel() {
     private val db = Firebase.firestore
     private val auth = Firebase.auth
 
+    // Variabel untuk menyimpan listener agar bisa dilepas saat tidak dibutuhkan
+    private var userProductsListener: ListenerRegistration? = null
+    private var allProductsListener: ListenerRegistration? = null
+
+    // Listener untuk status autentikasi
+    private val authStateListener = FirebaseAuth.AuthStateListener { firebaseAuth ->
+        val user = firebaseAuth.currentUser
+        if (user != null) {
+            // Jika user login, pasang listener untuk produknya
+            listenForUserProducts(user.uid)
+        } else {
+            // Jika user logout, hentikan listener dan kosongkan data
+            userProductsListener?.remove()
+            _userProducts.value = emptyList()
+        }
+    }
+
     private val _products = MutableStateFlow<List<Product>>(emptyList())
     val products: StateFlow<List<Product>> = _products
+
+    // State khusus untuk produk milik user
+    private val _userProducts = MutableStateFlow<List<Product>>(emptyList())
+    val userProducts: StateFlow<List<Product>> = _userProducts
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
@@ -78,21 +103,66 @@ class ProductViewModel : ViewModel() {
     private val _isSuccess = MutableStateFlow(false)
     val isSuccess: StateFlow<Boolean> = _isSuccess
 
-    // Fungsi untuk mengambil semua produk, diurutkan dari yang terbaru
-    fun fetchProducts() {
+    init {
+        // Panggil listener saat ViewModel pertama kali dibuat
+        // Ini memastikan data user dan semua produk selalu up-to-date
+        listenForAllProducts()
+        auth.addAuthStateListener(authStateListener)
+    }
+
+
+    private fun listenForUserProducts(userId: String) {
+        // Hentikan listener lama jika ada, untuk menghindari duplikat
+        userProductsListener?.remove()
+        userProductsListener = db.collection("products")
+            .whereEqualTo("sellerId", userId)
+            .orderBy("postedAt", Query.Direction.DESCENDING)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    Log.e("ProductViewModel", "Error listening for user products", error)
+                    return@addSnapshotListener
+                }
+
+                if (snapshot != null) {
+                    val userProductList = snapshot.documents.mapNotNull { doc ->
+                        doc.toObject(Product::class.java)?.copy(id = doc.id)
+                    }
+                    _userProducts.value = userProductList
+                }
+            }
+    }
+
+
+    private fun listenForAllProducts() {
+        allProductsListener?.remove()
+        allProductsListener = db.collection("products")
+            .orderBy("postedAt", Query.Direction.DESCENDING)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    Log.e("ProductViewModel", "Error listening for all products", error)
+                    return@addSnapshotListener
+                }
+                if (snapshot != null) {
+                    val allProductList = snapshot.documents.mapNotNull { doc ->
+                        doc.toObject(Product::class.java)?.copy(id = doc.id)
+                    }
+                    _products.value = allProductList
+                }
+            }
+    }
+
+
+    // Fungsi untuk menghapus produk
+    fun deleteProduct(productId: String) {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val snapshot = db.collection("products")
-                    .orderBy("postedAt", Query.Direction.DESCENDING)
-                    .get()
-                    .await()
-
-                _products.value = snapshot.documents.mapNotNull { doc ->
-                    doc.toObject(Product::class.java)?.copy(id = doc.id)
-                }
+                db.collection("products").document(productId).delete().await()
+                Log.d("ProductViewModel", "Product $productId deleted successfully.")
+                // Setelah berhasil hapus, ambil ulang daftar produk user
+//                fetchUserProducts()
             } catch (e: Exception) {
-                Log.e("ProductViewModel", "Error fetching products", e)
+                Log.e("ProductViewModel", "Error deleting product $productId", e)
             } finally {
                 _isLoading.value = false
             }
@@ -158,7 +228,8 @@ class ProductViewModel : ViewModel() {
 
                 Log.d("ProductViewModel", "Product added successfully to Firestore.")
                 _isSuccess.value = true
-
+                // Setelah berhasil tambah, ambil ulang daftar produk user
+//                fetchUserProducts()
             } catch (e: Exception) {
                 Log.e("ProductViewModel", "Error adding product", e)
             } finally {
@@ -224,5 +295,12 @@ class ProductViewModel : ViewModel() {
 
     fun resetSuccessState() {
         _isSuccess.value = false
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        userProductsListener?.remove()
+        allProductsListener?.remove()
+        auth.removeAuthStateListener(authStateListener)
     }
 }

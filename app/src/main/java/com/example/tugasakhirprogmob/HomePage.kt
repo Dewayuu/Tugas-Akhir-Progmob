@@ -69,6 +69,7 @@ import java.util.Locale
 fun MainApp() {
     val navController = rememberNavController()
     val searchViewModel: SearchViewModel = viewModel()
+    val productViewModel: ProductViewModel = viewModel()
 
     NavHost(
         navController = navController,
@@ -77,17 +78,20 @@ fun MainApp() {
         composable(Screen.Home.route) {
             HomeScreen(
                 navController = navController,
+                // Teruskan instance yang sama jika HomeScreen membutuhkannya
+                productViewModel = productViewModel,
                 searchViewModel = searchViewModel
             )
         }
         composable(Screen.Add.route) {
             ProductCreateScreen(
                 navController = navController,
-                onBackClick = { navController.popBackStack() }
+                onBackClick = { navController.popBackStack() },
+                // --- PERBAIKAN: Teruskan instance ViewModel yang sudah dibagikan ---
+                productViewModel = productViewModel
             )
         }
         composable(Screen.SearchScreen.route) {
-//            val searchViewModel: SearchViewModel = viewModel()
             val uiState by searchViewModel.uiState.collectAsStateWithLifecycle()
             SearchScreen(
                 navController = navController,
@@ -108,8 +112,10 @@ fun MainApp() {
         composable(Screen.Profile.route) {
             UserProfileScreen(
                 navController = navController,
-                onCartClick = { navController.navigate(Screen.Cart.route) }
-//                searchViewModel = searchViewModel
+                onCartClick = { navController.navigate(Screen.Cart.route) },
+                // --- PERBAIKAN: Teruskan instance ViewModel yang sudah dibagikan ---
+                productViewModel = productViewModel,
+                searchViewModel = searchViewModel
             )
         }
 
@@ -119,7 +125,6 @@ fun MainApp() {
         ) { backStackEntry ->
             val productId = backStackEntry.arguments?.getString("productId")
             if (productId != null) {
-                // Panggil ProductDetailScreen yang baru dan dinamis
                 ProductDetailScreen(
                     productId = productId,
                     onBackClick = { navController.popBackStack() }
@@ -135,7 +140,7 @@ fun MainApp() {
 @Composable
 fun HomeScreen(
     navController: NavController,
-    productViewModel: ProductViewModel = viewModel(),
+    productViewModel: ProductViewModel,
     searchViewModel: SearchViewModel
 ) {
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -177,9 +182,9 @@ fun HomeScreen(
     }
     // --- AKHIR DARI LOGIKA PENCARIAN ---
 
-    LaunchedEffect(Unit) {
-        productViewModel.fetchProducts()
-    }
+//    LaunchedEffect(Unit) {
+//        productViewModel.fetchProducts()
+//    }
 
     Scaffold(
         topBar = {
@@ -437,10 +442,12 @@ fun HomeScreenPreview() {
 
     TugasAkhirProgmobTheme {
         val dummyNavController = rememberNavController()
+        val fakeProductViewModel = ProductViewModel()
         HomeScreen(
             navController = dummyNavController,
             // Berikan ViewModel palsu yang sudah kita buat ke dalam parameter
-            searchViewModel = fakeSearchViewModel
+            searchViewModel = fakeSearchViewModel,
+            productViewModel = fakeProductViewModel
         )
     }
 }

@@ -1,21 +1,31 @@
 package com.example.tugasakhirprogmob.viewmodel
 
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.cloudinary.android.MediaManager
+import com.cloudinary.android.callback.ErrorInfo
+import com.cloudinary.android.callback.UploadCallback
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
-import com.google.firebase.storage.ktx.storage
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.tasks.await
-import java.util.UUID
+import kotlinx.coroutines.withContext
+import java.io.ByteArrayOutputStream
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 // Data class yang dipetakan ke dokumen di Firestore
 // Properti dibuat nullable agar bisa di-map dari Firestore dengan aman
@@ -51,7 +61,6 @@ class ProductViewModel : ViewModel() {
 
     private val db = Firebase.firestore
     private val auth = Firebase.auth
-    private val storage = Firebase.storage
 
     private val _products = MutableStateFlow<List<Product>>(emptyList())
     val products: StateFlow<List<Product>> = _products
@@ -68,16 +77,13 @@ class ProductViewModel : ViewModel() {
             _isLoading.value = true
             try {
                 val snapshot = db.collection("products")
-                    .orderBy("postedAt", Query.Direction.DESCENDING) // Urutkan dari yang terbaru
+                    .orderBy("postedAt", Query.Direction.DESCENDING)
                     .get()
                     .await()
 
-                // Map dokumen ke data class, sertakan ID dokumen
                 _products.value = snapshot.documents.mapNotNull { doc ->
-                    val product = doc.toObject(Product::class.java)
-                    product?.copy(id = doc.id) // Salin objek dan tambahkan ID-nya
+                    doc.toObject(Product::class.java)?.copy(id = doc.id)
                 }
-                Log.d("ProductViewModel", "Fetched ${_products.value.size} products.")
             } catch (e: Exception) {
                 Log.e("ProductViewModel", "Error fetching products", e)
             } finally {
@@ -87,6 +93,7 @@ class ProductViewModel : ViewModel() {
     }
 
     fun addProduct(
+        context: Context,
         name: String,
         priceStr: String,
         brand: String,
@@ -94,7 +101,7 @@ class ProductViewModel : ViewModel() {
         description: String,
         imageUri: Uri?
     ) {
-        if (name.isBlank() || priceStr.isBlank()) {
+        if (name.isBlank() || priceStr.isBlank() || imageUri == null) {
             Log.e("ProductViewModel", "Validation failed: Missing fields.")
             return
         }
@@ -110,22 +117,23 @@ class ProductViewModel : ViewModel() {
                 return@launch
             }
 
-//            try {
-//                val imageUrl = uploadProductImage(imageUri)
-//                if(imageUrl.isEmpty()) {
-//                    throw Exception("Image upload failed.")
-//                }
+            try {
+                // Inisialisasi Cloudinary (aman untuk dipanggil berulang kali)
+                CloudinaryManager.init(context.applicationContext)
+                // Kompres gambar sebelum mengunggahnya
+                val compressedImageData = compressImage(context, imageUri)
 
-                // Gunakan ProductRequest untuk membuat produk baru
+                // Unggah data gambar yang sudah dikompres
+                val imageUrl = uploadImageToCloudinary(compressedImageData)
+
                 val newProduct = ProductRequest(
                     name = name,
                     price = priceStr.toDoubleOrNull() ?: 0.0,
                     brand = brand,
                     category = category,
                     description = description,
-                    imageUrl = "test",
+                    imageUrl = imageUrl, // Simpan URL dari Cloudinary
                     sellerId = currentUser.uid,
-                    // Ambil nama dari profil pengguna jika tersedia
                     sellerName = currentUser.displayName.takeIf { !it.isNullOrBlank() } ?: "Anonymous Seller"
                 )
 
@@ -134,23 +142,66 @@ class ProductViewModel : ViewModel() {
                 Log.d("ProductViewModel", "Product added successfully to Firestore.")
                 _isSuccess.value = true
 
-//            } catch (e: Exception) {
-//                Log.e("ProductViewModel", "Error adding product", e)
-//            } finally {
-//                _isLoading.value = false
-//            }
+            } catch (e: Exception) {
+                Log.e("ProductViewModel", "Error adding product", e)
+            } finally {
+                _isLoading.value = false
+            }
         }
     }
 
-    private suspend fun uploadProductImage(uri: Uri): String {
-        return try {
-            val fileName = "product_images/${UUID.randomUUID()}.jpg"
-            val storageRef = storage.reference.child(fileName)
-            storageRef.putFile(uri).await()
-            storageRef.downloadUrl.await().toString()
-        } catch (e: Exception) {
-            Log.e("ProductViewModel", "Error uploading image to Firebase Storage", e)
-            ""
+    private suspend fun compressImage(context: Context, imageUri: Uri): ByteArray {
+        return withContext(Dispatchers.IO) {
+            val inputStream = context.contentResolver.openInputStream(imageUri)
+            val originalBitmap = BitmapFactory.decodeStream(inputStream)
+
+            var quality = 90
+            val outputStream = ByteArrayOutputStream()
+
+            // Kompres gambar ke dalam format JPEG
+            originalBitmap.compress(Bitmap.CompressFormat.JPEG, quality, outputStream)
+
+            // Jika ukurannya masih terlalu besar (misal > 1MB), kurangi kualitasnya lagi
+            // Batas ini bisa disesuaikan
+            while (outputStream.size() > 1_000_000 && quality > 10) {
+                outputStream.reset() // Hapus data kompresi sebelumnya
+                quality -= 10 // Kurangi kualitas
+                originalBitmap.compress(Bitmap.CompressFormat.JPEG, quality, outputStream)
+                Log.d("ImageCompress", "Retrying compression with quality: $quality")
+            }
+
+            Log.d("ImageCompress", "Final image size: ${outputStream.size() / 1024} KB with quality $quality%")
+            outputStream.toByteArray()
+        }
+    }
+
+    private suspend fun uploadImageToCloudinary(imageData: ByteArray): String {
+        return suspendCancellableCoroutine { continuation ->
+            MediaManager.get().upload(imageData) // Unggah data byte, bukan URI
+                .callback(object : UploadCallback {
+                    override fun onStart(requestId: String?) {
+                        Log.d("CloudinaryUpload", "Upload started...")
+                    }
+
+                    override fun onProgress(requestId: String?, bytes: Long, totalBytes: Long) {}
+
+                    override fun onSuccess(requestId: String?, resultData: MutableMap<Any?, Any?>?) {
+                        val url = resultData?.get("secure_url") as? String
+                        if (url != null) {
+                            continuation.resume(url)
+                        } else {
+                            continuation.resumeWithException(Exception("Cloudinary URL is null"))
+                        }
+                    }
+
+                    override fun onError(requestId: String?, error: ErrorInfo?) {
+                        Log.e("CloudinaryUpload", "Upload error: ${error?.description}")
+                        continuation.resumeWithException(Exception(error?.description ?: "Unknown Cloudinary error"))
+                    }
+
+                    override fun onReschedule(requestId: String?, error: ErrorInfo?) {}
+                })
+                .dispatch()
         }
     }
 

@@ -1,3 +1,8 @@
+import java.util.Properties
+import java.io.FileInputStream
+
+
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -6,6 +11,12 @@ plugins {
     alias(libs.plugins.dagger.hilt.android)
     alias(libs.plugins.kotlin.kapt)
     id("com.google.gms.google-services")
+}
+
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localProperties.load(FileInputStream(localPropertiesFile))
 }
 
 android {
@@ -20,6 +31,15 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        vectorDrawables {
+            useSupportLibrary = true
+        }
+
+        // Buat field di BuildConfig dari local.properties
+        // Ini cara aman untuk menyimpan kredensial
+        buildConfigField("String", "CLOUDINARY_CLOUD_NAME", "\"${localProperties.getProperty("CLOUDINARY_CLOUD_NAME")}\"")
+        buildConfigField("String", "CLOUDINARY_API_KEY", "\"${localProperties.getProperty("CLOUDINARY_API_KEY")}\"")
+        buildConfigField("String", "CLOUDINARY_API_SECRET", "\"${localProperties.getProperty("CLOUDINARY_API_SECRET")}\"")
     }
 
     buildTypes {
@@ -40,6 +60,15 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig =  true
+    }
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.1"
+    }
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
     }
 }
 
@@ -55,7 +84,6 @@ dependencies {
 
     // Firebase Dependencies
     implementation(platform("com.google.firebase:firebase-bom:33.15.0"))
-
     implementation("com.google.android.gms:play-services-auth:21.2.0")
 
     // Firestore, Auth, Storage
@@ -92,6 +120,9 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+
+    // Cloudinary
+    implementation("com.cloudinary:cloudinary-android:2.4.0")
 
     implementation("androidx.activity:activity-compose:1.7.0")
     implementation("androidx.compose.ui:ui:1.5.0")

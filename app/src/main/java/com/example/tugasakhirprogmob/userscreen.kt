@@ -74,22 +74,6 @@ fun UserProfileScreen(
                 }
             }
 
-            // 🧷 Filter Buttons
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp)
-                    .horizontalScroll(rememberScrollState())
-            ) {
-                listOf("Filters", "Jacket", "Women’s Clothing").forEach {
-                    AssistChip(
-                        onClick = { /* TODO */ },
-                        label = { Text(it) },
-                        modifier = Modifier.padding(end = 8.dp)
-                    )
-                }
-            }
-
             Spacer(modifier = Modifier.height(16.dp))
 
             // 👤 Profile Card

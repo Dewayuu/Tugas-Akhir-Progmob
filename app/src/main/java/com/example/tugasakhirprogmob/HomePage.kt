@@ -223,7 +223,6 @@ fun DefaultHomeScreenContent(products: List<Product>, navController: NavControll
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 8.dp)
     ) {
-        item { FilterChips() }
         item { TopSellingBanner() }
         item { CategoryRow() }
         item {
@@ -342,22 +341,6 @@ fun ProductCard(product: Product, navController: NavController) {
         Text(product.brand, style = MaterialTheme.typography.labelSmall, color = Color.Gray, maxLines = 1)
         Text(product.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold, maxLines = 1)
         Text(formatCurrency.format(product.price), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
-    }
-}
-
-// --- Composable lainnya (tetap sama) ---
-
-@Composable
-fun FilterChips() {
-    val chips = listOf("Filters", "Jacket", "Women's Clothing")
-    LazyRow(modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)) {
-        items(chips) { chip ->
-            AssistChip(
-                onClick = {},
-                label = { Text(chip) },
-                modifier = Modifier.padding(end = 8.dp)
-            )
-        }
     }
 }
 

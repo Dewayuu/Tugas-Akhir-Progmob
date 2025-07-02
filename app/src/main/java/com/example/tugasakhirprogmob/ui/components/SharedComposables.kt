@@ -119,8 +119,9 @@ fun BottomNavBar(navController: NavController) {
 fun ProductCard(product: Product, navController: NavController) {
     val formatCurrency = remember { NumberFormat.getCurrencyInstance(Locale("in", "ID")) }
     Column(modifier = Modifier.clickable { /* navController.navigate("productDetail/${product.id}") */ }) {
+        val coverImage = product.imageUrls.firstOrNull()
         AsyncImage(
-            model = product.imageUrl,
+            model = coverImage,
             contentDescription = product.name,
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(12.dp)).background(Color.LightGray)

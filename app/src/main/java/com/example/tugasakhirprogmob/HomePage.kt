@@ -3,29 +3,47 @@ package com.example.tugasakhirprogmob
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavType
@@ -33,16 +51,15 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.example.tugasakhirprogmob.ui.components.*
+import coil.compose.AsyncImage
+import com.example.tugasakhirprogmob.ui.components.BottomNavBar
+import com.example.tugasakhirprogmob.ui.components.TopBar
 import com.example.tugasakhirprogmob.ui.theme.TugasAkhirProgmobTheme
 import com.example.tugasakhirprogmob.viewmodel.Product
 import com.example.tugasakhirprogmob.viewmodel.ProductViewModel
 import com.example.tugasakhirprogmob.viewmodel.SearchViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.compose.AsyncImage
 import java.text.NumberFormat
 import java.util.Locale
-import androidx.compose.runtime.saveable.rememberSaveable
 
 
 // Wrapper utama aplikasi dengan Navigasi.
@@ -91,9 +108,25 @@ fun MainApp() {
         composable(Screen.Profile.route) {
             UserProfileScreen(
                 navController = navController,
-                onCartClick = { navController.navigate(Screen.Cart.route) },
-                searchViewModel = searchViewModel
+                onCartClick = { navController.navigate(Screen.Cart.route) }
+//                searchViewModel = searchViewModel
             )
+        }
+
+        composable(
+            route = "productDetail/{productId}",
+            arguments = listOf(navArgument("productId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val productId = backStackEntry.arguments?.getString("productId")
+            if (productId != null) {
+                // Panggil ProductDetailScreen yang baru dan dinamis
+                ProductDetailScreen(
+                    productId = productId,
+                    onBackClick = { navController.popBackStack() }
+                )
+            } else {
+                navController.popBackStack()
+            }
         }
     }
 }
@@ -243,7 +276,6 @@ fun DefaultHomeScreenContent(products: List<Product>, navController: NavControll
             ) {
                 productRow.forEach { product ->
                     Box(modifier = Modifier.weight(1f)) {
-                        // --- MENGGUNAKAN ProductCard DARI SHARED COMPOSABLES ---
                         ProductCard(product = product, navController = navController)
                     }
                 }
@@ -309,7 +341,6 @@ fun SearchResultsUI(query: String, products: List<Product>, navController: NavCo
                     ) {
                         productRow.forEach { product ->
                             Box(modifier = Modifier.weight(1f)) {
-                                // --- MENGGUNAKAN ProductCard DARI SHARED COMPOSABLES ---
                                 ProductCard(product = product, navController = navController)
                             }
                         }
@@ -329,11 +360,16 @@ fun SearchResultsUI(query: String, products: List<Product>, navController: NavCo
 fun ProductCard(product: Product, navController: NavController) {
     val formatCurrency = remember { NumberFormat.getCurrencyInstance(Locale("in", "ID")) }
     Column(modifier = Modifier.clickable {
-        // TODO: Navigasi ke detail produk dengan ID product.id
-        // Contoh: navController.navigate("productDetail/${product.id}")
+        // Aksi: Navigasi ke halaman detail dengan mengirimkan ID produk
+        navController.navigate("productDetail/${product.id}")
     }) {
+        val displayImage = if (product.imageUrls.isNotEmpty()) {
+            product.imageUrls.first()
+        } else {
+            product.imageUrl
+        }
         AsyncImage(
-            model = product.imageUrl,
+            model = displayImage,
             contentDescription = product.name,
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(12.dp)).background(Color.LightGray)

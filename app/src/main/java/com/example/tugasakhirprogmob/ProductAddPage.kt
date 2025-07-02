@@ -7,44 +7,18 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -79,17 +53,17 @@ fun ProductCreateScreen(
     var brand by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf("Category") }
-    var imageUri by remember { mutableStateOf<Uri?>(null) }
-
+    var imageUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
     // Mengamati state dari ViewModel
     val isLoading by productViewModel.isLoading.collectAsState()
     val isSuccess by productViewModel.isSuccess.collectAsState()
 
     // Launcher untuk memilih gambar dari galeri
     val imagePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        imageUri = uri
+        contract = ActivityResultContracts.GetMultipleContents()
+    ) { uris: List<Uri> ->
+        // Tambahkan gambar yang baru dipilih ke dalam list yang sudah ada
+        imageUris = imageUris + uris
     }
 
     // Efek ini akan berjalan ketika `isSuccess` menjadi true
@@ -139,9 +113,9 @@ fun ProductCreateScreen(
                     item { Spacer(modifier = Modifier.height(8.dp)) }
 
                     item {
-                        ImageUploader(
-                            imageUri = imageUri,
-                            onClick = { imagePickerLauncher.launch("image/*") }
+                        MultiImageUploader(
+                            imageUris = imageUris,
+                            onAddClick = { imagePickerLauncher.launch("image/*") }
                         )
                     }
 
@@ -180,7 +154,7 @@ fun ProductCreateScreen(
                             brand = brand,
                             category = selectedCategory,
                             description = description,
-                            imageUri = imageUri
+                            imageUris = imageUris
                         )
                     },
                     modifier = Modifier.fillMaxWidth().padding(16.dp).height(56.dp),
@@ -201,32 +175,50 @@ fun ProductCreateScreen(
 }
 
 @Composable
-fun ImageUploader(imageUri: Uri?, onClick: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .size(500.dp, 200.dp) // Ukuran dari file Anda
-            .clip(RoundedCornerShape(16.dp))
-            .background(Color.White)
-            .border(width = 2.dp, color = Color.LightGray, shape = RoundedCornerShape(16.dp))
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        if (imageUri != null) {
-            AsyncImage(
-                model = imageUri,
-                contentDescription = "Selected product image",
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
-            )
-        } else {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Add Image",
-                    modifier = Modifier.size(48.dp),
-                    tint = Color.Gray
-                )
-                Text(text = "Add Image", color = Color.Gray)
+fun MultiImageUploader(
+    imageUris: List<Uri>,
+    onAddClick: () -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("Product Images", fontWeight = FontWeight.SemiBold)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(120.dp)
+                .border(width = 1.dp, color = Color.LightGray, shape = RoundedCornerShape(12.dp))
+                .padding(8.dp)
+        ) {
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                // Tampilkan gambar yang sudah dipilih
+                items(imageUris) { uri ->
+                    AsyncImage(
+                        model = uri,
+                        contentDescription = "Selected Image",
+                        modifier = Modifier
+                            .size(104.dp)
+                            .clip(RoundedCornerShape(8.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+
+                // Tombol untuk menambah gambar lagi
+                item {
+                    Box(
+                        modifier = Modifier
+                            .size(104.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color.Gray.copy(alpha = 0.3f))
+                            .clickable(onClick = onAddClick),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Add Image",
+                            modifier = Modifier.size(32.dp),
+                            tint = Color.DarkGray
+                        )
+                    }
+                }
             }
         }
     }

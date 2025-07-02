@@ -3,6 +3,7 @@ package com.example.tugasakhirprogmob
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -15,7 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -28,160 +29,193 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import com.example.tugasakhirprogmob.ui.theme.TugasAkhirProgmobTheme
+import com.example.tugasakhirprogmob.viewmodel.Product
+import com.example.tugasakhirprogmob.viewmodel.ProductDetailViewModel
+import com.google.firebase.Timestamp
+import java.text.NumberFormat
+import java.util.Locale
+import java.util.concurrent.TimeUnit
 
-data class ProductDetail(
-    val images: List<Int>,
-    val name: String,
-    val price: String,
-    val postDate: String,
-    val category: String,
-    val brand: String,
-    val seller: Seller,
-    val description: String
-)
+//data class ProductDetail(
+//    val images: List<Int>,
+//    val name: String,
+//    val price: String,
+//    val postDate: String,
+//    val category: String,
+//    val brand: String,
+//    val seller: Seller,
+//    val description: String
+//)
+//
+//data class Seller(
+//    val avatarRes: Int,
+//    val name: String,
+//    val location: String,
+//    val rating: Float,
+//    val reviewCount: Int,
+//    val joinDate: String
+//)
+//
+//// Data sampel untuk digunakan di UI dan preview
+//val sampleSeller = Seller(
+//    avatarRes = R.drawable.pfp1,
+//    name = "Seller Name",
+//    location = "Location",
+//    rating = 4.5f,
+//    reviewCount = 3,
+//    joinDate = "2y,4mo"
+//)
+//
+//val sampleProductDetail = ProductDetail(
+//    images = listOf(
+//        R.drawable.nike,
+//        R.drawable.pfp1,
+//        R.drawable.uniqlo,
+//        R.drawable.pfp1
+//    ),
+//    name = "Very Long Product Name",
+//    price = "$10.99",
+//    postDate = "2 Weeks Ago",
+//    category = "Categories",
+//    brand = "Brand",
+//    seller = sampleSeller,
+//    description = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur."
+//)
+//
+//class ProductDetailPage : ComponentActivity() {
+//    override fun onCreate(savedInstanceState: Bundle?) {
+//        super.onCreate(savedInstanceState)
+//        setContent {
+//            TugasAkhirProgmobTheme {
+//                ProductDetailScreen(product = sampleProductDetail)
+//            }
+//        }
+//    }
+//}
 
-data class Seller(
-    val avatarRes: Int,
-    val name: String,
-    val location: String,
-    val rating: Float,
-    val reviewCount: Int,
-    val joinDate: String
-)
+@Composable
+fun ProductDetailScreen(
+    productId: String,
+    onBackClick: () -> Unit,
+    viewModel: ProductDetailViewModel = viewModel()
+) {
+    // Ambil data dari ViewModel
+    val product by viewModel.product.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
 
-// Data sampel untuk digunakan di UI dan preview
-val sampleSeller = Seller(
-    avatarRes = R.drawable.pfp1,
-    name = "Seller Name",
-    location = "Location",
-    rating = 4.5f,
-    reviewCount = 3,
-    joinDate = "2y,4mo"
-)
+    // Panggil fetchProductById saat layar pertama kali dibuat
+    LaunchedEffect(productId) {
+        viewModel.fetchProductById(productId)
+    }
 
-val sampleProductDetail = ProductDetail(
-    images = listOf(
-        R.drawable.nike,
-        R.drawable.pfp1,
-        R.drawable.uniqlo,
-        R.drawable.pfp1
-    ),
-    name = "Very Long Product Name",
-    price = "$10.99",
-    postDate = "2 Weeks Ago",
-    category = "Categories",
-    brand = "Brand",
-    seller = sampleSeller,
-    description = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur."
-)
-
-class ProductDetailPage : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContent {
-            TugasAkhirProgmobTheme {
-                ProductDetailScreen(product = sampleProductDetail)
+    Scaffold(
+        containerColor = Color.White
+    ) { innerPadding ->
+        Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+            if (isLoading) {
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+            } else if (product != null) {
+                // Jika produk berhasil diambil, tampilkan kontennya
+                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    item { ImageSliderSection(product = product!!, onBackClick = onBackClick) }
+                    item { ProductTitleSection(name = product!!.name, price = product!!.price) }
+                    item { ProductMetadataSection(product = product!!) }
+                    item { SellerInfoSection(sellerName = product!!.sellerName) }
+                    item { DescriptionSection(description = product!!.description) }
+                }
+            } else {
+                // Tampilkan pesan jika produk tidak ditemukan
+                Text("Product not found.", modifier = Modifier.align(Alignment.Center))
             }
         }
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun ProductDetailScreen(product: ProductDetail) {
-    Scaffold(
-        // Kita gunakan BottomNavBar yang sudah dibuat sebelumnya
-//        bottomBar = { SearchBottomNavBar(selectedItem = 0) },
-        containerColor = Color.White
-    ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(bottom = innerPadding.calculateBottomPadding()) // Padding untuk bottom bar
-        ) {
-            // Bagian 1: Slider Gambar
-            item { ImageSliderSection(images = product.images) }
-            // Bagian 2: Judul & Harga Produk
-            item { ProductTitleSection(name = product.name, price = product.price) }
-            // Bagian 3: Metadata Produk
-            item { ProductMetadataSection(product = product) }
-            // Bagian 4: Info Penjual
-            item { SellerInfoSection(seller = product.seller) }
-            // Bagian 5: Deskripsi
-            item { DescriptionSection(description = product.description) }
-        }
+fun ImageSliderSection(product: Product, onBackClick: () -> Unit) {
+    // Logika untuk memilih sumber gambar:
+    // 1. Prioritaskan `imageUrls` jika tidak kosong (data baru).
+    // 2. Jika kosong, gunakan `imageUrl` dari data lama.
+    // `listOfNotNull` akan membuat list berisi satu item jika imageUrl tidak null, atau list kosong jika null.
+    val images = if (product.imageUrls.isNotEmpty()) {
+        product.imageUrls
+    } else {
+        listOfNotNull(product.imageUrl)
     }
-}
 
-@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
-@Composable
-fun ImageSliderSection(images: List<Int>) {
+    // Jika tidak ada gambar sama sekali, tampilkan placeholder
+    if (images.isEmpty()) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f)
+                .background(Color.LightGray),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("No Image Available")
+        }
+        return
+    }
+
     val pagerState = rememberPagerState(pageCount = { images.size })
 
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .aspectRatio(1f) // Membuat gambar persegi
-    ) {
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier.fillMaxSize()
-        ) { page ->
-            Image(
-                painter = painterResource(id = images[page]),
+    Box(modifier = Modifier.fillMaxWidth().aspectRatio(1f)) {
+        HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
+            AsyncImage(
+                model = images.getOrNull(page),
                 contentDescription = "Product Image ${page + 1}",
                 contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize().background(Color.LightGray)
             )
         }
 
-        // Tombol Kembali (Back)
         IconButton(
-            onClick = { /* TODO: Handle back navigation */ },
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(16.dp)
-                .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+            onClick = onBackClick,
+            modifier = Modifier.align(Alignment.TopStart).padding(16.dp).background(Color.Black.copy(alpha = 0.5f), CircleShape)
         ) {
             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
         }
 
-        // Indikator Pager (titik-titik)
-        Row(
-            Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 16.dp)
-                .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
-                .padding(horizontal = 8.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            repeat(pagerState.pageCount) { iteration ->
-                val color = if (pagerState.currentPage == iteration) Color.White else Color.Gray
-                Box(
-                    modifier = Modifier
-                        .padding(2.dp)
-                        .clip(CircleShape)
-                        .background(color)
-                        .size(8.dp)
-                )
+        // Indikator Pager
+        if (images.size > 1) {
+            Row(
+                Modifier.align(Alignment.BottomCenter).padding(bottom = 16.dp).background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(12.dp)).padding(horizontal = 8.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.Center
+            ) {
+                repeat(pagerState.pageCount) { iteration ->
+                    val color = if (pagerState.currentPage == iteration) Color.White else Color.Gray
+                    Box(modifier = Modifier.padding(2.dp).clip(CircleShape).background(color).size(8.dp))
+                }
             }
         }
     }
 }
 
 @Composable
-fun ProductTitleSection(name: String, price: String) {
+fun ProductTitleSection(name: String, price: Double) {
+    val formatCurrency = remember { NumberFormat.getCurrencyInstance(Locale("in", "ID")) }
+    val formattedPrice = remember(price) {
+        try {
+            // Coba format langsung sebagai angka
+            formatCurrency.format(price)
+        } catch (e: Exception) {
+            // Jika gagal (sangat tidak mungkin jika tipe datanya Double, tapi untuk keamanan),
+            // tampilkan sebagai string biasa.
+            "Rp ${price.toLong()}"
+        }
+    }
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
+        modifier = Modifier.fillMaxWidth().padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(text = name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-            Text(text = price, style = MaterialTheme.typography.titleLarge, color = Color.Gray)
+            Text(text = formattedPrice, style = MaterialTheme.typography.titleLarge, color = Color.Gray)
         }
         Spacer(modifier = Modifier.width(16.dp))
         IconButton(
@@ -201,75 +235,95 @@ fun ProductTitleSection(name: String, price: String) {
 }
 
 @Composable
-fun ProductMetadataSection(product: ProductDetail) {
+fun ProductMetadataSection(product: Product) {
+    // Helper untuk mengubah Timestamp menjadi teks "x days ago"
+    fun formatPostDate(timestamp: Timestamp?): String {
+        if (timestamp == null) return "N/A"
+        val now = Timestamp.now().seconds
+        val diff = now - timestamp.seconds
+        val days = TimeUnit.SECONDS.toDays(diff)
+        return when {
+            days < 1 -> "Today"
+            days < 2 -> "Yesterday"
+            days < 30 -> "$days days ago"
+            else -> "${days / 30} months ago"
+        }
+    }
+
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Ikon ini akan tetap berukuran default (14.dp) karena kita tidak menentukan ukurannya
-        InfoChip(
-            icon = painterResource(id = R.drawable.clock),
-            text = product.postDate,
-            iconSize = 18.dp
-        )
-
-        InfoChip(
-            icon = painterResource(id = R.drawable.footwear2),
-            text = product.category,
-            iconSize = 20.dp
-        )
-
+        InfoChip(icon = painterResource(id = R.drawable.clock), text = formatPostDate(product.postedAt), iconSize = 18.dp)
+        InfoChip(icon = painterResource(id = R.drawable.footwear2), text = product.category, iconSize = 20.dp)
         Text("•", color = Color.Gray)
         Text(text = product.brand, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
     }
 }
 
 @Composable
-fun SellerInfoSection(seller: Seller) {
+fun SellerInfoSection(sellerName: String) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
+        modifier = Modifier.fillMaxWidth().padding(16.dp),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5)),
-        elevation = CardDefaults.cardElevation(0.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Image(
-                painter = painterResource(id = seller.avatarRes),
-                contentDescription = "Seller Avatar",
-                modifier = Modifier
-                    .size(50.dp)
-                    .clip(CircleShape)
-            )
+        Row(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Image(painter = painterResource(id = R.drawable.pfp1), contentDescription = "Seller Avatar", modifier = Modifier.size(50.dp).clip(CircleShape))
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = seller.name, fontWeight = FontWeight.Bold)
-                Text(text = seller.location, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                Text(text = sellerName, fontWeight = FontWeight.Bold)
+                Text(text = "Location", style = MaterialTheme.typography.bodySmall, color = Color.Gray) // Placeholder
             }
-            Column(horizontalAlignment = Alignment.End) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(text = seller.rating.toString(), fontWeight = FontWeight.Bold)
-                    Icon(Icons.Default.Star, contentDescription = "Rating", tint = Color(0xFFFFC107), modifier = Modifier.size(16.dp))
-                }
-                Text(text = "${seller.reviewCount} Reviews", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-            }
-            Spacer(modifier = Modifier.width(12.dp))
-            Column(horizontalAlignment = Alignment.End) {
-                Text(text = seller.joinDate, fontWeight = FontWeight.Bold)
-                Text(text = "Joined", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-            }
+            // ... (Info rating dan join date bisa ditambahkan jika data seller diambil terpisah)
         }
     }
 }
+
+//@Composable
+//fun SellerInfoSection(sellerName: String) {
+//    Card(
+//        modifier = Modifier
+//            .fillMaxWidth()
+//            .padding(16.dp),
+//        shape = RoundedCornerShape(12.dp),
+//        colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5)),
+//        elevation = CardDefaults.cardElevation(0.dp)
+//    ) {
+//        Row(
+//            modifier = Modifier
+//                .fillMaxWidth()
+//                .padding(12.dp),
+//            verticalAlignment = Alignment.CenterVertically
+//        ) {
+//            Image(
+//                painter = painterResource(id = seller.avatarRes),
+//                contentDescription = "Seller Avatar",
+//                modifier = Modifier
+//                    .size(50.dp)
+//                    .clip(CircleShape)
+//            )
+//            Spacer(modifier = Modifier.width(12.dp))
+//            Column(modifier = Modifier.weight(1f)) {
+//                Text(text = seller.name, fontWeight = FontWeight.Bold)
+//                Text(text = seller.location, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+//            }
+//            Column(horizontalAlignment = Alignment.End) {
+//                Row(verticalAlignment = Alignment.CenterVertically) {
+//                    Text(text = seller.rating.toString(), fontWeight = FontWeight.Bold)
+//                    Icon(Icons.Default.Star, contentDescription = "Rating", tint = Color(0xFFFFC107), modifier = Modifier.size(16.dp))
+//                }
+//                Text(text = "${seller.reviewCount} Reviews", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+//            }
+//            Spacer(modifier = Modifier.width(12.dp))
+//            Column(horizontalAlignment = Alignment.End) {
+//                Text(text = seller.joinDate, fontWeight = FontWeight.Bold)
+//                Text(text = "Joined", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+//            }
+//        }
+//    }
+//}
 
 @Composable
 fun DescriptionSection(description: String) {
@@ -307,11 +361,16 @@ fun InfoChip(
     }
 }
 
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-fun ProductDetailScreenPreview() {
-    TugasAkhirProgmobTheme {
-        ProductDetailScreen(product = sampleProductDetail)
-    }
-}
+//@Preview(showBackground = true, showSystemUi = true)
+//@Composable
+//fun ProductDetailScreenPreview() {
+//    TugasAkhirProgmobTheme {
+//        ProductDetailScreen(
+//            product = sampleProductDetail,
+//            productId = TODO(),
+//            onBackClick = TODO(),
+//            viewModel = TODO()
+//        )
+//    }
+//}
 

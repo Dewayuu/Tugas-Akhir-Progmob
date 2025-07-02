@@ -22,15 +22,12 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.tugasakhirprogmob.ui.components.BottomNavBar
 import com.example.tugasakhirprogmob.ui.theme.TugasAkhirProgmobTheme
-// Import Product data class dari viewmodel
 import com.example.tugasakhirprogmob.viewmodel.Product
 import com.example.tugasakhirprogmob.viewmodel.SearchUiState
-import com.example.tugasakhirprogmob.viewmodel.SearchViewModel
 import java.text.NumberFormat
 import java.util.Locale
 import androidx.compose.foundation.lazy.LazyColumn
@@ -41,13 +38,9 @@ import androidx.compose.ui.text.font.FontWeight
 import coil.compose.AsyncImage
 
 
-// Anda bisa memanggil SearchScreen dari NavHost di MainApp
-// composable("search") { SearchScreen(navController = navController) }
-
 @Composable
 fun SearchScreen(
     navController: NavController,
-//    viewModel: SearchViewModel = viewModel(),
     uiState: SearchUiState,
     onQueryChange: (String) -> Unit,
     onSearch: (String) -> Unit,
@@ -99,7 +92,8 @@ fun SearchScreen(
                 SearchResultsHeader(query = uiState.searchQuery)
                 // ProductGrid sekarang menerima List<Product> dari ViewModel
                 ProductGrid(
-                    products = uiState.displayedProducts
+                    products = uiState.displayedProducts,
+                    navController = navController // Teruskan NavController
                 )
             }
         }
@@ -107,7 +101,7 @@ fun SearchScreen(
 }
 
 @Composable
-fun ProductGrid(products: List<Product>, modifier: Modifier = Modifier) {
+fun ProductGrid(products: List<Product>, navController: NavController, modifier: Modifier = Modifier) {
     if (products.isEmpty()) {
         Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text("No products found.")
@@ -123,7 +117,7 @@ fun ProductGrid(products: List<Product>, modifier: Modifier = Modifier) {
     ) {
         items(products, key = { it.id }) { product ->
             // Gunakan ProductCard yang sudah ada dan konsisten
-            HomePageProductCard(product = product)
+            HomePageProductCard(product = product, navController = navController)
         }
     }
 }
@@ -131,12 +125,20 @@ fun ProductGrid(products: List<Product>, modifier: Modifier = Modifier) {
 // Gunakan kembali ProductCard yang sama seperti di HomePage untuk konsistensi
 // Saya beri nama berbeda di sini untuk menghindari konflik jika ada file lain
 @Composable
-fun HomePageProductCard(product: Product) {
+fun HomePageProductCard(product: Product, navController: NavController) {
     val formatCurrency = remember { NumberFormat.getCurrencyInstance(Locale("in", "ID")) }
 
-    Column(modifier = Modifier.clickable { /* TODO: Navigasi ke detail produk dengan ID product.id */ }) {
+    Column(modifier = Modifier.clickable {
+        // Aksi: Navigasi ke halaman detail dengan mengirimkan ID produk
+        navController.navigate("productDetail/${product.id}")
+    }) {
+        val displayImage = if (product.imageUrls.isNotEmpty()) {
+            product.imageUrls.first()
+        } else {
+            product.imageUrl
+        }
         AsyncImage(
-            model = product.imageUrl,
+            model = displayImage,
             contentDescription = product.name,
             contentScale = ContentScale.Crop,
             modifier = Modifier

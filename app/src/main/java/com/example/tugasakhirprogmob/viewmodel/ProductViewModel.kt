@@ -10,6 +10,7 @@ import androidx.lifecycle.viewModelScope
 import com.cloudinary.android.MediaManager
 import com.cloudinary.android.callback.ErrorInfo
 import com.cloudinary.android.callback.UploadCallback
+import com.example.tugasakhirprogmob.BuildConfig
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.FieldValue
@@ -17,6 +18,9 @@ import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -36,10 +40,13 @@ data class Product(
     val description: String = "",
     val category: String = "",
     val brand: String = "",
-    val imageUrl: String = "",
+    // Untuk data baru (mendukung banyak gambar)
+    val imageUrls: List<String> = emptyList(),
+    // Untuk data lama (hanya satu gambar), dibuat nullable
+    val imageUrl: String? = null,
     val sellerId: String = "",
     val sellerName: String = "",
-    val postedAt: Timestamp? = null // Ubah ke Timestamp agar bisa menerima data dari Firestore
+    val postedAt: Timestamp? = null
 )
 
 // Data class untuk request penambahan produk baru
@@ -50,7 +57,7 @@ data class ProductRequest(
     val description: String,
     val category: String,
     val brand: String,
-    val imageUrl: String,
+    val imageUrls: List<String>,
     val sellerId: String,
     val sellerName: String,
     val postedAt: FieldValue = FieldValue.serverTimestamp()
@@ -99,9 +106,9 @@ class ProductViewModel : ViewModel() {
         brand: String,
         category: String,
         description: String,
-        imageUri: Uri?
+        imageUris: List<Uri> // Diubah menjadi list
     ) {
-        if (name.isBlank() || priceStr.isBlank() || imageUri == null) {
+        if (name.isBlank() || priceStr.isBlank() || imageUris.isEmpty()) {
             Log.e("ProductViewModel", "Validation failed: Missing fields.")
             return
         }
@@ -120,11 +127,21 @@ class ProductViewModel : ViewModel() {
             try {
                 // Inisialisasi Cloudinary (aman untuk dipanggil berulang kali)
                 CloudinaryManager.init(context.applicationContext)
-                // Kompres gambar sebelum mengunggahnya
-                val compressedImageData = compressImage(context, imageUri)
 
-                // Unggah data gambar yang sudah dikompres
-                val imageUrl = uploadImageToCloudinary(compressedImageData)
+                // Unggah semua gambar secara bersamaan dan kumpulkan URL-nya
+                val uploadedImageUrls = coroutineScope {
+                    imageUris.map { uri ->
+                        async(Dispatchers.IO) {
+                            val compressedData = compressImage(context, uri)
+                            uploadImageToCloudinary(compressedData)
+                        }
+                    }.awaitAll() // Tunggu semua proses async selesai
+                }
+
+                // Cek jika ada unggahan yang gagal
+                if (uploadedImageUrls.any { it.isEmpty() }) {
+                    throw Exception("One or more image uploads failed.")
+                }
 
                 val newProduct = ProductRequest(
                     name = name,
@@ -132,9 +149,9 @@ class ProductViewModel : ViewModel() {
                     brand = brand,
                     category = category,
                     description = description,
-                    imageUrl = imageUrl, // Simpan URL dari Cloudinary
+                    imageUrls = uploadedImageUrls, // Simpan list URL
                     sellerId = currentUser.uid,
-                    sellerName = currentUser.displayName.takeIf { !it.isNullOrBlank() } ?: "Anonymous Seller"
+                    sellerName = currentUser.displayName.orEmpty()
                 )
 
                 db.collection("products").add(newProduct).await()

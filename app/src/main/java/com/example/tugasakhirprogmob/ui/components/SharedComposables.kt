@@ -79,7 +79,7 @@ fun TopBar(
 fun BottomNavBar(navController: NavController) {
     val items = listOf(Screen.Home, Screen.SearchScreen, Screen.Add, Screen.Profile)
     val icons = mapOf(
-        Screen.Home to Pair(R.drawable.home_outline, R.drawable.home_filled),
+        Screen.Home to Pair(R.drawable.home_outline2, R.drawable.home_filled2),
         Screen.SearchScreen to Pair(R.drawable.search2, R.drawable.search_filled),
         Screen.Add to Pair(R.drawable.add, R.drawable.add_filled),
         Screen.Profile to Pair(R.drawable.profile, R.drawable.profile_filled)

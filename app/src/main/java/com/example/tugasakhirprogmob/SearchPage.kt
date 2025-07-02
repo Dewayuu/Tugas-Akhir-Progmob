@@ -63,16 +63,20 @@ fun SearchScreen(
 
     Scaffold(
         topBar = {
-            SearchTopBar(
-                query = uiState.searchQuery,
-                onQueryChange = onQueryChange,
-                onSearch = { query ->
-                    onSearch(query)
-                    keyboardController?.hide()
-                },
-                onFocusChange = onSearchFocusChange,
-                onCartClick = { navController.navigate(Screen.Cart.route) }
-            )
+            Column (
+                modifier = Modifier.statusBarsPadding()
+            ) {
+                SearchTopBar(
+                    query = uiState.searchQuery,
+                    onQueryChange = onQueryChange,
+                    onSearch = { query ->
+                        onSearch(query)
+                        keyboardController?.hide()
+                    },
+                    onFocusChange = onSearchFocusChange,
+                    onCartClick = { navController.navigate(Screen.Cart.route) }
+                )
+            }
         },
         bottomBar = { BottomNavBar(navController = navController) },
         containerColor = Color.White
@@ -206,7 +210,8 @@ fun SearchTopBar(
 
         // --- IKON KERANJANG DITAMBAHKAN DI SINI ---
         Spacer(modifier = Modifier.width(8.dp))
-        IconButton(onClick = onCartClick) {            Icon(
+        IconButton(onClick = onCartClick) {
+            Icon(
                 painter = painterResource(id = R.drawable.cart),
                 contentDescription = "Cart",
                 modifier = Modifier.size(28.dp) // Ukuran ikon disamakan

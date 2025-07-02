@@ -28,31 +28,35 @@ import androidx.navigation.compose.rememberNavController
 
 // Nama fungsi diubah dan sekarang menerima NavController
 @Composable
-fun UserProfileScreen(navController: NavController) {
+fun UserProfileScreen(
+    navController: NavController,
+    onCartClick: () -> Unit
+) {
     Scaffold(
-        // Kita gunakan BottomNavBar bersama agar navigasi konsisten
+//        topBar = {
+//            TopAppBar(
+//                title = { Text("Profile") },
+//                colors = TopAppBarDefaults.topAppBarColors(
+//                    containerColor = Color.Transparent // Atau warna yang Anda inginkan
+//                )
+//            )
+//        },
         bottomBar = { BottomNavBar(navController = navController) },
         containerColor = Color(0xFFEFF3F6)
-    ) { innerPadding ->
+    ) { innerPadding -> // innerPadding sekarang akan berisi padding untuk topBar dan bottomBar
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding) // Terapkan padding dari Scaffold
+                .padding(innerPadding) // Terapkan padding yang benar dari Scaffold
                 .verticalScroll(rememberScrollState())
         ) {
-            // Header sederhana untuk halaman profil
-            TopAppBar(
-                title = { Text("Profile") },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent
-                )
-            )
 
             // 🔍 Search Bar
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 12.dp)
+                    // Mungkin Anda ingin menambahkan sedikit padding di atas
+                    .padding(top = 8.dp, start = 12.dp, end = 12.dp, bottom = 12.dp)
                     .background(Color.White, RoundedCornerShape(24.dp))
                     .height(48.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -61,8 +65,12 @@ fun UserProfileScreen(navController: NavController) {
                 Icon(Icons.Default.Search, contentDescription = "Search", tint = Color.Gray)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Search Edge", color = Color.Gray, modifier = Modifier.weight(1f))
-                IconButton(onClick = { /* TODO: go to cart */ }) {
-                    Icon(Icons.Default.ShoppingCart, contentDescription = "Cart")
+                IconButton(onClick = onCartClick) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.cart),
+                        contentDescription = "Cart",
+                        modifier = Modifier.size(28.dp) // Ukuran ikon disamakan
+                    )
                 }
             }
 
@@ -188,7 +196,8 @@ fun UserProfileScreen(navController: NavController) {
 fun UserProfileScreenPreview() {
     TugasAkhirProgmobTheme {
         // Preview sekarang memanggil fungsi yang benar dengan NavController bohongan
-        UserProfileScreen(navController = rememberNavController())
+        UserProfileScreen(navController = rememberNavController(),
+            onCartClick = {})
     }
 }
 

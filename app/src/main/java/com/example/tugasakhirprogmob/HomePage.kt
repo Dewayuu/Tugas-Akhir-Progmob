@@ -89,7 +89,10 @@ fun MainApp() {
             )
         }
         composable(Screen.Profile.route) {
-            UserProfileScreen(navController = navController)
+            UserProfileScreen(
+                navController = navController,
+                onCartClick = { navController.navigate(Screen.Cart.route) }
+            )
         }
     }
 }
@@ -146,21 +149,23 @@ fun HomeScreen(
 
     Scaffold(
         topBar = {
-            // --- MENGGUNAKAN TopBar DARI SHARED COMPOSABLES ---
-            TopBar(
-                query = searchQuery,
-                onQueryChange = {
-                    searchQuery = it
-                    // Update juga query di ViewModel agar tetap sinkron
-                    searchViewModel.onSearchQueryChanged(it)
-                    if (it.isBlank()) {
-                        searchExecuted = false
-                    }
-                },
-                onSearch = { performSearch(it) },
-                onFocusChange = { isFocused -> isSearchBarFocused = isFocused },
-                onCartClick = { navController.navigate(Screen.Cart.route) }
-            )
+            Column (
+                modifier = Modifier.statusBarsPadding()
+            ) {
+                TopBar(
+                    query = searchQuery,
+                    onQueryChange = {
+                        searchQuery = it
+                        searchViewModel.onSearchQueryChanged(it)
+                        if (it.isBlank()) {
+                            searchExecuted = false
+                        }
+                    },
+                    onSearch = { performSearch(it) },
+                    onFocusChange = { isFocused -> isSearchBarFocused = isFocused },
+                    onCartClick = { navController.navigate(Screen.Cart.route) }
+                )
+            }
         },
         bottomBar = {
             if (!isSearchBarFocused && !searchExecuted) {
@@ -216,7 +221,7 @@ fun HomeScreen(
 fun DefaultHomeScreenContent(products: List<Product>, navController: NavController) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(vertical = 8.dp)
+        contentPadding = PaddingValues(bottom = 8.dp)
     ) {
         item { FilterChips() }
         item { TopSellingBanner() }
@@ -345,7 +350,7 @@ fun ProductCard(product: Product, navController: NavController) {
 @Composable
 fun FilterChips() {
     val chips = listOf("Filters", "Jacket", "Women's Clothing")
-    LazyRow(modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 8.dp)) {
+    LazyRow(modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)) {
         items(chips) { chip ->
             AssistChip(
                 onClick = {},

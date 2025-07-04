@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import coil.compose.AsyncImage
 import com.example.tugasakhirprogmob.R
 import com.example.tugasakhirprogmob.Screen
@@ -96,10 +97,19 @@ fun BottomNavBar(navController: NavController) {
             NavigationBarItem(
                 selected = isSelected,
                 onClick = {
-                    navController.navigate(screen.route) {
-                        popUpTo(navController.graph.startDestinationId) { saveState = true }
-                        launchSingleTop = true
-                        restoreState = true
+                    // Hanya navigasi jika destinasi berbeda untuk mencegah tumpukan yang aneh
+                    if (currentRoute != screen.route) {
+                        navController.navigate(screen.route) {
+                            // Pop up ke destinasi awal dari graph untuk menghindari tumpukan besar
+                            // saat pengguna memilih item navigasi.
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            // Hindari membuat salinan destinasi yang sama saat item dipilih ulang
+                            launchSingleTop = true
+                            // Pulihkan state saat memilih ulang item yang sebelumnya dipilih
+                            restoreState = false // (-) tombol back addproduct lari ke homepage. kalau true, profile ga bisa diakses lgsg dari navbar kalau tombol add product diklik.
+                        }
                     }
                 },
                 icon = {

@@ -19,6 +19,8 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.tasks.await
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import com.google.firebase.firestore.FieldValue
+
 
 // Data class untuk menampung data profil yang akan ditampilkan di UI
 data class UserProfile(
@@ -27,7 +29,7 @@ data class UserProfile(
     val email: String = "",
     val bio: String? = null,
     val address: String? = null,
-    val subRegion: String? = null,
+    val phoneNumber: String? = null,
     val profilePictureUrl: String? = null,
     val bannerUrl: String? = null
 )
@@ -68,9 +70,11 @@ class ProfileViewModel : ViewModel() {
         newName: String,
         newBio: String,
         newAddress: String,
-        newSubRegion: String,
+        newPhoneNumber: String,
         newProfilePicUri: Uri?,
-        newBannerUri: Uri?
+        newBannerUri: Uri?,
+        removeProfilePic: Boolean,
+        removeBanner: Boolean
     ) {
         val userId = auth.currentUser?.uid ?: return
         viewModelScope.launch {
@@ -81,6 +85,13 @@ class ProfileViewModel : ViewModel() {
                 // Siapkan map untuk menampung data yang akan diupdate
                 val updates = mutableMapOf<String, Any>()
 
+                if (removeProfilePic) {
+                    updates["profilePictureUrl"] = FieldValue.delete()
+                } else if (newProfilePicUri != null) {
+                    val imageUrl = uploadImageToCloudinary(context, newProfilePicUri, "profile_pictures")
+                    updates["profilePictureUrl"] = imageUrl
+                }
+
                 // 1. Cek dan unggah foto profil jika ada yang baru
                 if (newProfilePicUri != null) {
                     val imageUrl = uploadImageToCloudinary(context, newProfilePicUri, "profile_pictures")
@@ -88,7 +99,9 @@ class ProfileViewModel : ViewModel() {
                 }
 
                 // 2. Cek dan unggah banner jika ada yang baru
-                if (newBannerUri != null) {
+                if (removeBanner) {
+                    updates["bannerUrl"] = FieldValue.delete()
+                } else if (newBannerUri != null) {
                     val bannerUrl = uploadImageToCloudinary(context, newBannerUri, "banners")
                     updates["bannerUrl"] = bannerUrl
                 }
@@ -97,10 +110,12 @@ class ProfileViewModel : ViewModel() {
                 updates["name"] = newName
                 updates["bio"] = newBio
                 updates["address"] = newAddress
-                updates["subRegion"] = newSubRegion
+                updates["phoneNumber"] = newPhoneNumber
 
                 // 4. Lakukan update ke Firestore
-                db.collection("users").document(userId).update(updates).await()
+                if (updates.isNotEmpty()) {
+                    db.collection("users").document(userId).update(updates).await()
+                }
                 _updateSuccess.value = true
 
             } catch (e: Exception) {

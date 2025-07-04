@@ -45,6 +45,8 @@ import com.example.tugasakhirprogmob.ui.theme.TugasAkhirProgmobTheme
 import com.example.tugasakhirprogmob.viewmodel.Product
 import com.example.tugasakhirprogmob.viewmodel.ProductViewModel
 import com.example.tugasakhirprogmob.viewmodel.SearchViewModel
+import com.example.tugasakhirprogmob.viewmodel.ProfileViewModel
+import com.example.tugasakhirprogmob.viewmodel.UserProfile
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -55,12 +57,14 @@ fun UserProfileScreen(
     navController: NavController,
     onCartClick: () -> Unit,
     productViewModel: ProductViewModel,
-    searchViewModel: SearchViewModel
+    searchViewModel: SearchViewModel,
+    profileViewModel: ProfileViewModel = viewModel()
 ) {
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
 
     // --- STATE DARI VIEWMODEL ---
+    val userProfile by profileViewModel.userProfile.collectAsStateWithLifecycle()
     val realProducts by productViewModel.products.collectAsStateWithLifecycle()
     val userProducts by productViewModel.userProducts.collectAsStateWithLifecycle()
     val searchUiState by searchViewModel.uiState.collectAsStateWithLifecycle()
@@ -85,7 +89,7 @@ fun UserProfileScreen(
         focusManager.clearFocus()
 
         if (trimmedQuery.isNotBlank()) {
-            searchViewModel.executeSearch(trimmedQuery)
+            searchViewModel.executeSearch(trimmedQuery, realProducts)
         }
 
         searchQuery = trimmedQuery
@@ -94,10 +98,11 @@ fun UserProfileScreen(
     }
     // --- AKHIR DARI LOGIKA PENCARIAN ---
 
-//    LaunchedEffect(Unit) {
+    LaunchedEffect(Unit) {
+        profileViewModel.fetchUserProfile() // Mengambil data profil saat layar muncul
 //        productViewModel.fetchUserProducts() // Untuk listing di profil
 //        productViewModel.fetchProducts()     // Untuk fungsi pencarian
-//    }
+    }
 
     Scaffold(
         topBar = {
@@ -158,7 +163,8 @@ fun UserProfileScreen(
                 DefaultUserProfileContent(
                     navController = navController,
                     userProducts = userProducts,
-                    productViewModel = productViewModel
+                    productViewModel = productViewModel,
+                    userProfile = userProfile
                 )
             }
         }
@@ -169,7 +175,8 @@ fun UserProfileScreen(
 fun DefaultUserProfileContent(
     navController: NavController,
     userProducts: List<Product>,
-    productViewModel: ProductViewModel
+    productViewModel: ProductViewModel,
+    userProfile: UserProfile?
 ) {
     val addCardText = if (userProducts.isEmpty()) {
         "Start Selling"
@@ -186,8 +193,16 @@ fun DefaultUserProfileContent(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Color(0xFFB3B3B3)) // Abu tua (grey section)
+                .background(Color(0xFFB3B3B3))
         ) {
+            AsyncImage(
+                model = userProfile?.bannerUrl,
+                contentDescription = "User Banner",
+                // Crop akan memastikan gambar memenuhi area tanpa distorsi
+                contentScale = ContentScale.Crop,
+                // matchParentSize akan membuat gambar memenuhi ukuran Box
+                modifier = Modifier.matchParentSize()
+            )
             Column {
                 Spacer(modifier = Modifier.height(15.dp))
 
@@ -212,14 +227,23 @@ fun DefaultUserProfileContent(
                                 .size(64.dp)
                                 .clip(CircleShape)
                                 .background(Color.Gray)
-                        )
+                        ) {
+                            AsyncImage(
+                                model = userProfile?.profilePictureUrl,
+                                contentDescription = "User Profile Picture",
+                                placeholder = painterResource(id = R.drawable.profile),
+                                error = painterResource(id = R.drawable.profile),
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        }
 
                         Spacer(modifier = Modifier.width(12.dp))
 
                         // Kolom kiri: nama & lokasi
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("User A", style = MaterialTheme.typography.titleMedium)
-                            Text("Denpasar", style = MaterialTheme.typography.bodySmall, color = Color.DarkGray)
+                            Text(userProfile?.name ?: "Loading...", style = MaterialTheme.typography.titleMedium)
+                            Text(userProfile?.address ?: "", style = MaterialTheme.typography.bodySmall, color = Color.DarkGray)
                         }
 
                         // Kolom tengah: rating & reviews
@@ -263,7 +287,16 @@ fun DefaultUserProfileContent(
                                     modifier = Modifier
                                         .size(36.dp) // Ukuran kotak tombol
                                         .background(Color(0xFFB0B0B0), shape = RoundedCornerShape(8.dp))
-                                        .clickable { /* aksi sesuai tombol */ },
+                                        .clickable {
+                                            when (desc) {
+                                                "Edit" -> {
+                                                    navController.navigate(Screen.EditProfile.route)
+                                                }
+                                                "Logout" -> {
+                                                    // TODO: Tambahkan logika untuk logout di sini nanti
+                                                }
+                                            }
+                                        },
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
@@ -292,7 +325,7 @@ fun DefaultUserProfileContent(
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text("About", style = MaterialTheme.typography.titleMedium)
-                        Text("Placeholder text", style = MaterialTheme.typography.bodyMedium)
+                        Text(userProfile?.bio ?: "", style = MaterialTheme.typography.bodyMedium)
                     }
                 }
 
@@ -368,7 +401,11 @@ fun UserProductCard(
                     .background(Color.LightGray)
             )
 
-            Column(modifier = Modifier.padding(12.dp)) {
+            Column(
+                modifier = Modifier
+                    .padding(12.dp)
+                    .height(88.dp) // Beri tinggi tetap untuk area teks
+            ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.Top,
@@ -405,7 +442,7 @@ fun UserProductCard(
                 Text(
                     text = product.name,
                     fontSize = 16.sp,
-                    maxLines = 2,
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Spacer(modifier = Modifier.height(4.dp))
@@ -454,13 +491,15 @@ fun UserProfileScreenPreview() {
     val fakeSearchViewModel = object : SearchViewModel() {}
     // Diasumsikan ProductViewModel juga aman untuk diinisiasi seperti ini untuk preview
     val fakeProductViewModel = ProductViewModel()
+    val fakeProfileViewModel = ProfileViewModel()
 
     TugasAkhirProgmobTheme {
         UserProfileScreen(
             navController = rememberNavController(),
             onCartClick = {},
             productViewModel = fakeProductViewModel,
-            searchViewModel = fakeSearchViewModel
+            searchViewModel = fakeSearchViewModel,
+            profileViewModel = fakeProfileViewModel
         )
     }
 }

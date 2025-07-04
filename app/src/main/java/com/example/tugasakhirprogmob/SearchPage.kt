@@ -42,6 +42,7 @@ import coil.compose.AsyncImage
 fun SearchScreen(
     navController: NavController,
     uiState: SearchUiState,
+    allProducts: List<Product>, // Tetap terima daftar produk
     onQueryChange: (String) -> Unit,
     onSearch: (String) -> Unit,
     onSearchFocusChange: () -> Unit,
@@ -50,10 +51,9 @@ fun SearchScreen(
     LaunchedEffect(Unit) {
         onScreenVisible()
     }
-    // Ambil state dan fungsi dari ViewModel
-//    val uiState by viewModel.uiState.collectAsState()
     val keyboardController = LocalSoftwareKeyboardController.current
 
+    // --- KEMBALIKAN STRUKTUR SCAFFOLD ---
     Scaffold(
         topBar = {
             Column (
@@ -90,15 +90,15 @@ fun SearchScreen(
                 )
             } else {
                 SearchResultsHeader(query = uiState.searchQuery)
-                // ProductGrid sekarang menerima List<Product> dari ViewModel
                 ProductGrid(
                     products = uiState.displayedProducts,
-                    navController = navController // Teruskan NavController
+                    navController = navController
                 )
             }
         }
     }
 }
+
 
 @Composable
 fun ProductGrid(products: List<Product>, navController: NavController, modifier: Modifier = Modifier) {
@@ -116,20 +116,16 @@ fun ProductGrid(products: List<Product>, navController: NavController, modifier:
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         items(products, key = { it.id }) { product ->
-            // Gunakan ProductCard yang sudah ada dan konsisten
             HomePageProductCard(product = product, navController = navController)
         }
     }
 }
 
-// Gunakan kembali ProductCard yang sama seperti di HomePage untuk konsistensi
-// Saya beri nama berbeda di sini untuk menghindari konflik jika ada file lain
 @Composable
 fun HomePageProductCard(product: Product, navController: NavController) {
     val formatCurrency = remember { NumberFormat.getCurrencyInstance(Locale("in", "ID")) }
 
     Column(modifier = Modifier.clickable {
-        // Aksi: Navigasi ke halaman detail dengan mengirimkan ID produk
         navController.navigate("productDetail/${product.id}")
     }) {
         val displayImage = if (product.imageUrls.isNotEmpty()) {
@@ -154,9 +150,6 @@ fun HomePageProductCard(product: Product, navController: NavController) {
     }
 }
 
-
-// --- Composable lainnya seperti SearchTopBar, SearchResultsHeader, SearchHistoryView tetap sama ---
-
 @Composable
 fun SearchTopBar(
     query: String,
@@ -166,32 +159,30 @@ fun SearchTopBar(
     onCartClick: () -> Unit
 ) {
     val keyboardController = LocalSoftwareKeyboardController.current
-
-    // Menggunakan Row, bukan Surface, agar konsisten dengan HomePage
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp), // Padding yang sama dengan HomePage
+            .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         OutlinedTextField(
             value = query,
             onValueChange = onQueryChange,
-            placeholder = { Text("Search Edge...") }, // Placeholder disamakan
+            placeholder = { Text("Search Edge...") },
             modifier = Modifier
                 .weight(1f)
-                .height(56.dp) // Tinggi disamakan
+                .height(56.dp)
                 .onFocusChanged { focusState ->
                     if (focusState.isFocused) {
                         onFocusChange()
                     }
                 },
-            shape = RoundedCornerShape(12.dp), // Bentuk sudut disamakan
+            shape = RoundedCornerShape(12.dp),
             leadingIcon = {
                 Icon(
                     painter = painterResource(id = R.drawable.search),
                     contentDescription = "Search Icon",
-                    modifier = Modifier.size(26.dp) // Ukuran ikon disamakan
+                    modifier = Modifier.size(26.dp)
                 )
             },
             singleLine = true,
@@ -200,7 +191,6 @@ fun SearchTopBar(
                 keyboardController?.hide()
                 onSearch(query)
             }),
-            // Warna disamakan dengan TopBar di HomePage
             colors = OutlinedTextFieldDefaults.colors(
                 unfocusedContainerColor = Color(0xFFF0F0F0),
                 focusedContainerColor = Color.White,
@@ -210,16 +200,14 @@ fun SearchTopBar(
             )
         )
 
-        // --- IKON KERANJANG DITAMBAHKAN DI SINI ---
         Spacer(modifier = Modifier.width(8.dp))
         IconButton(onClick = onCartClick) {
             Icon(
                 painter = painterResource(id = R.drawable.cart),
                 contentDescription = "Cart",
-                modifier = Modifier.size(28.dp) // Ukuran ikon disamakan
+                modifier = Modifier.size(28.dp)
             )
         }
-        // -----------------------------------------
     }
 }
 
@@ -265,29 +253,4 @@ fun SearchResultsHeader(query: String) {
         style = MaterialTheme.typography.titleMedium,
         modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
     )
-}
-
-
-@Preview(showBackground = true)
-@Composable
-fun SearchScreenPreview() {
-    TugasAkhirProgmobTheme {
-        val dummyNavController = rememberNavController()
-
-        // Buat data bohongan untuk preview
-        val dummyUiState = SearchUiState(
-            displayedProducts = emptyList(), // atau isi dengan data produk palsu
-            isSearching = false,
-            isLoading = false
-        )
-
-        SearchScreen(
-            navController = dummyNavController,
-            uiState = dummyUiState,
-            onQueryChange = {},
-            onSearch = {},
-            onSearchFocusChange = {},
-            onScreenVisible = {}
-        )
-    }
 }

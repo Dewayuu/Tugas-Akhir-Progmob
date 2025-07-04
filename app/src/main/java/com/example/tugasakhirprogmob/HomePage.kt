@@ -57,6 +57,7 @@ import com.example.tugasakhirprogmob.ui.components.TopBar
 import com.example.tugasakhirprogmob.ui.theme.TugasAkhirProgmobTheme
 import com.example.tugasakhirprogmob.viewmodel.Product
 import com.example.tugasakhirprogmob.viewmodel.ProductViewModel
+import com.example.tugasakhirprogmob.viewmodel.ProfileViewModel
 import com.example.tugasakhirprogmob.viewmodel.SearchViewModel
 import java.text.NumberFormat
 import java.util.Locale
@@ -70,6 +71,7 @@ fun MainApp() {
     val navController = rememberNavController()
     val searchViewModel: SearchViewModel = viewModel()
     val productViewModel: ProductViewModel = viewModel()
+    val profileViewModel: ProfileViewModel = viewModel()
 
     NavHost(
         navController = navController,
@@ -93,13 +95,23 @@ fun MainApp() {
         }
         composable(Screen.SearchScreen.route) {
             val uiState by searchViewModel.uiState.collectAsStateWithLifecycle()
+            val allProducts by productViewModel.products.collectAsStateWithLifecycle()
+
             SearchScreen(
                 navController = navController,
                 uiState = uiState,
+                // Teruskan daftar produk ke SearchScreen
+                allProducts = allProducts,
                 onQueryChange = searchViewModel::onSearchQueryChanged,
-                onSearch = searchViewModel::executeSearch,
+                // Saat mencari, berikan query dan daftar produknya
+                onSearch = { query ->
+                    searchViewModel.executeSearch(query, allProducts)
+                },
                 onSearchFocusChange = searchViewModel::onSearchFocused,
-                onScreenVisible = { searchViewModel.resetSearchState() }
+                // Saat layar muncul, reset state dengan daftar produk terbaru
+                onScreenVisible = {
+                    searchViewModel.resetSearchState(allProducts)
+                }
             )
         }
         composable(Screen.Cart.route) {
@@ -115,10 +127,17 @@ fun MainApp() {
                 onCartClick = { navController.navigate(Screen.Cart.route) },
                 // --- PERBAIKAN: Teruskan instance ViewModel yang sudah dibagikan ---
                 productViewModel = productViewModel,
-                searchViewModel = searchViewModel
+                searchViewModel = searchViewModel,
+                profileViewModel = profileViewModel
             )
         }
-
+        composable(Screen.EditProfile.route) {
+            EditProfileScreen(
+                navController = navController,
+                onBackClick = { navController.popBackStack() },
+                profileViewModel = profileViewModel
+            )
+        }
         composable(
             route = "productDetail/{productId}",
             arguments = listOf(navArgument("productId") { type = NavType.StringType })
@@ -173,7 +192,7 @@ fun HomeScreen(
         focusManager.clearFocus()
 
         // Delegasikan proses pencarian & penyimpanan riwayat ke ViewModel
-        searchViewModel.executeSearch(trimmedQuery)
+        searchViewModel.executeSearch(trimmedQuery, realProducts)
 
         // Tetap kelola state lokal untuk mengontrol UI di HomePage
         searchQuery = trimmedQuery

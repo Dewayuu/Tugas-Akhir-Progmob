@@ -14,6 +14,7 @@ import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.firestore.ktx.toObject
 import com.google.firebase.ktx.Firebase
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -50,10 +51,13 @@ class ProfileViewModel : ViewModel() {
     private val _orders = MutableStateFlow<List<Order>>(emptyList())
     val orders: StateFlow<List<Order>> = _orders
 
-    // --- TAMBAHKAN STATE BARU INI ---
     private val _paymentSuccess = MutableStateFlow(false)
     val paymentSuccess: StateFlow<Boolean> = _paymentSuccess
-    // ---------------------------------
+
+    // --- STATE BARU UNTUK MENYIMPAN DETAIL SATU ORDER ---
+    private val _selectedOrder = MutableStateFlow<Order?>(null)
+    val selectedOrder: StateFlow<Order?> = _selectedOrder
+    // ----------------------------------------------------
 
     fun fetchUserProfile() {
         val userId = auth.currentUser?.uid ?: return
@@ -92,18 +96,33 @@ class ProfileViewModel : ViewModel() {
         }
     }
 
-    // --- TAMBAHKAN FUNGSI BARU INI ---
-    fun confirmPayment(orderId: String) {
+    // --- FUNGSI BARU UNTUK MENGAMBIL SATU ORDER ---
+    fun fetchOrderById(orderId: String) {
+        if (orderId.isBlank()) {
+            _selectedOrder.value = null
+            return
+        }
         viewModelScope.launch {
+            try {
+                val doc = db.collection("orders").document(orderId).get().await()
+                _selectedOrder.value = doc.toObject(Order::class.java)?.copy(orderId = doc.id)
+            } catch (e: Exception) {
+                Log.e("ProfileViewModel", "Error fetching order by ID", e)
+            }
+        }
+    }
+    // ---------------------------------------------
+
+    fun processSimulatedPayment(orderId: String) {
+        viewModelScope.launch {
+            delay(3000L) // Jeda 3 detik untuk simulasi
             try {
                 db.collection("orders").document(orderId)
                     .update("status", "Lunas")
                     .await()
                 _paymentSuccess.value = true
-                // Refresh daftar pesanan setelah update
-                fetchUserOrders()
             } catch (e: Exception) {
-                Log.e("ProfileViewModel", "Error confirming payment", e)
+                Log.e("ProfileViewModel", "Error processing payment", e)
             }
         }
     }
@@ -111,7 +130,6 @@ class ProfileViewModel : ViewModel() {
     fun resetPaymentStatus() {
         _paymentSuccess.value = false
     }
-    // ---------------------------------
 
     fun updateProfile(
         context: Context,

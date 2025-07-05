@@ -28,7 +28,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -54,6 +53,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import coil.compose.AsyncImage
 import com.example.tugasakhirprogmob.ui.components.BottomNavBar
+import com.example.tugasakhirprogmob.ui.components.SearchHistoryView
 import com.example.tugasakhirprogmob.ui.components.TopBar
 import com.example.tugasakhirprogmob.ui.theme.TugasAkhirProgmobTheme
 import com.example.tugasakhirprogmob.viewmodel.Product
@@ -63,11 +63,6 @@ import com.example.tugasakhirprogmob.viewmodel.SearchViewModel
 import java.text.NumberFormat
 import java.util.Locale
 
-
-
-// Wrapper utama aplikasi dengan Navigasi.
-// Ini bisa berada di MainActivity.kt atau di sini.
-// Kita tidak mengubah bagian ini, sesuai permintaan Anda.
 @Composable
 fun MainApp() {
     val navController = rememberNavController()
@@ -82,7 +77,6 @@ fun MainApp() {
         composable(Screen.Home.route) {
             HomeScreen(
                 navController = navController,
-                // Teruskan instance yang sama jika HomeScreen membutuhkannya
                 productViewModel = productViewModel,
                 searchViewModel = searchViewModel
             )
@@ -91,7 +85,6 @@ fun MainApp() {
             ProductCreateScreen(
                 navController = navController,
                 onBackClick = { navController.popBackStack() },
-                // --- PERBAIKAN: Teruskan instance ViewModel yang sudah dibagikan ---
                 productViewModel = productViewModel
             )
         }
@@ -102,15 +95,12 @@ fun MainApp() {
             SearchScreen(
                 navController = navController,
                 uiState = uiState,
-                // Teruskan daftar produk ke SearchScreen
                 allProducts = allProducts,
                 onQueryChange = searchViewModel::onSearchQueryChanged,
-                // Saat mencari, berikan query dan daftar produknya
                 onSearch = { query ->
                     searchViewModel.executeSearch(query, allProducts)
                 },
                 onSearchFocusChange = searchViewModel::onSearchFocused,
-                // Saat layar muncul, reset state dengan daftar produk terbaru
                 onScreenVisible = {
                     searchViewModel.resetSearchState(allProducts)
                 }
@@ -118,18 +108,16 @@ fun MainApp() {
         }
         composable(Screen.Cart.route) {
             ViewCartScreen(
-                navController = navController, // Teruskan navController
+                navController = navController,
                 onBackClick = {
                     navController.popBackStack()
                 }
             )
         }
-
         composable(Screen.Profile.route) {
             UserProfileScreen(
                 navController = navController,
                 onCartClick = { navController.navigate(Screen.Cart.route) },
-                // --- PERBAIKAN: Teruskan instance ViewModel yang sudah dibagikan ---
                 productViewModel = productViewModel,
                 searchViewModel = searchViewModel,
                 profileViewModel = profileViewModel
@@ -142,31 +130,44 @@ fun MainApp() {
                 profileViewModel = profileViewModel
             )
         }
-        composable("order_success") {
-            OrderSuccessScreen(navController = navController)
-        }
-
         composable("checkout") {
             CheckoutScreen(navController = navController)
         }
-
         composable("order_history") {
             OrderHistoryScreen(navController = navController)
         }
 
         composable(
-            "payment/{orderId}",
+            "payment_method/{orderId}",
             arguments = listOf(navArgument("orderId") { type = NavType.StringType })
         ) { backStackEntry ->
-            PaymentScreen(
+            PaymentMethodScreen(
                 navController = navController,
                 orderId = backStackEntry.arguments?.getString("orderId") ?: ""
             )
         }
 
+        composable(
+            "payment_instruction/{orderId}/{method}",
+            arguments = listOf(
+                navArgument("orderId") { type = NavType.StringType },
+                navArgument("method") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            PaymentInstructionScreen(
+                navController = navController,
+                orderId = backStackEntry.arguments?.getString("orderId") ?: "",
+                method = backStackEntry.arguments?.getString("method") ?: "",
+                profileViewModel = profileViewModel // <-- TERUSKAN VIEWMODEL YANG SUDAH ADA
+            )
+        }
+
+        // --- RUTE DUPLIKAT DIHAPUS, HANYA ADA SATU INI ---
         composable("order_success") {
             OrderSuccessScreen(navController = navController)
         }
+        // ---------------------------------------------------
+
         composable(
             route = "productDetail/{productId}",
             arguments = listOf(navArgument("productId") { type = NavType.StringType })
@@ -194,16 +195,12 @@ fun HomeScreen(
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
 
-    // --- STATE DARI VIEWMODEL (TIDAK BERUBAH) ---
     val realProducts by productViewModel.products.collectAsStateWithLifecycle()
     val isLoading by productViewModel.isLoading.collectAsStateWithLifecycle()
     val searchUiState by searchViewModel.uiState.collectAsStateWithLifecycle()
 
-    // --- LOGIKA UNTUK FITUR PENCARIAN (TIDAK BERUBAH) ---
-    // Logika ini sudah benar dan dipertahankan.
     var searchQuery by remember { mutableStateOf("") }
     var isSearchBarFocused by remember { mutableStateOf(false) }
-    // var searchHistory by rememberSaveable { mutableStateOf<List<String>>(emptyList()) }
     var searchExecuted by remember { mutableStateOf(false) }
 
     val displayedProducts = if (searchExecuted) {
@@ -220,19 +217,12 @@ fun HomeScreen(
         keyboardController?.hide()
         focusManager.clearFocus()
 
-        // Delegasikan proses pencarian & penyimpanan riwayat ke ViewModel
         searchViewModel.executeSearch(trimmedQuery, realProducts)
 
-        // Tetap kelola state lokal untuk mengontrol UI di HomePage
         searchQuery = trimmedQuery
         searchExecuted = trimmedQuery.isNotBlank()
         isSearchBarFocused = false
     }
-    // --- AKHIR DARI LOGIKA PENCARIAN ---
-
-//    LaunchedEffect(Unit) {
-//        productViewModel.fetchProducts()
-//    }
 
     Scaffold(
         topBar = {
@@ -256,7 +246,6 @@ fun HomeScreen(
         },
         bottomBar = {
             if (!isSearchBarFocused && !searchExecuted) {
-                // --- MENGGUNAKAN BottomNavBar DARI SHARED COMPOSABLES ---
                 BottomNavBar(navController = navController)
             }
         }
@@ -271,12 +260,11 @@ fun HomeScreen(
                     CircularProgressIndicator()
                 }
             }
-            // --- LOGIKA TAMPILAN DINAMIS (MENGGUNAKAN SHARED COMPOSABLES) ---
             else if (isSearchBarFocused) {
                 SearchHistoryView(
                     history = searchUiState.searchHistory,
                     onHistoryClick = { historyTerm ->
-                        searchQuery = historyTerm // Update text di search bar
+                        searchQuery = historyTerm
                         performSearch(historyTerm)
                     }
                 )
@@ -292,17 +280,11 @@ fun HomeScreen(
                     }
                 )
             } else {
-                // Tampilan default homepage
                 DefaultHomeScreenContent(products = realProducts, navController = navController)
             }
         }
     }
 }
-
-
-// --- KONTEN-KONTEN SCREEN ---
-// Composable di bawah ini spesifik untuk HomePage, jadi tetap di sini.
-// Namun, sekarang ia memanggil ProductCard dari SharedComposables.
 
 @Composable
 fun DefaultHomeScreenContent(products: List<Product>, navController: NavController) {
@@ -350,7 +332,6 @@ fun SearchResultsUI(query: String, products: List<Product>, navController: NavCo
                 onClick = onDismiss
             )
     ) {
-        // --- MENGGUNAKAN SearchResultsHeader DARI SHARED COMPOSABLES ---
         SearchResultsHeader(query = query)
 
         if (products.isEmpty()) {
@@ -408,12 +389,10 @@ fun SearchResultsUI(query: String, products: List<Product>, navController: NavCo
     }
 }
 
-// ProductCard perlu dimodifikasi untuk menerima NavController agar bisa navigasi ke detail
 @Composable
 fun ProductCard(product: Product, navController: NavController) {
     val formatCurrency = remember { NumberFormat.getCurrencyInstance(Locale("in", "ID")) }
     Column(modifier = Modifier.clickable {
-        // Aksi: Navigasi ke halaman detail dengan mengirimkan ID produk
         navController.navigate("productDetail/${product.id}")
     }) {
         val displayImage = if (product.imageUrls.isNotEmpty()) {
@@ -460,7 +439,7 @@ fun CategoryRow() {
         }
         Spacer(modifier = Modifier.height(8.dp))
         LazyRow {
-            items(5) { // Placeholder
+            items(5) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.padding(end = 16.dp).width(75.dp)
@@ -482,10 +461,7 @@ fun CategoryRow() {
 @Preview(showBackground = true)
 @Composable
 fun HomeScreenPreview() {
-    // SearchViewModel yang asli memanggil Firebase saat dibuat, yang akan crash di mode preview.
-    // Kita buat ViewModel palsu (fake) yang tidak melakukan apa-apa khusus untuk preview.
     val fakeSearchViewModel = object : SearchViewModel() {
-        // Meng-override init block agar tidak memanggil fetchAllProducts()
     }
 
     TugasAkhirProgmobTheme {
@@ -493,7 +469,6 @@ fun HomeScreenPreview() {
         val fakeProductViewModel = ProductViewModel()
         HomeScreen(
             navController = dummyNavController,
-            // Berikan ViewModel palsu yang sudah kita buat ke dalam parameter
             searchViewModel = fakeSearchViewModel,
             productViewModel = fakeProductViewModel
         )

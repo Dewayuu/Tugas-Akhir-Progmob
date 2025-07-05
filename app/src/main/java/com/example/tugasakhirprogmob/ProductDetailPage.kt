@@ -1,8 +1,8 @@
 package com.example.tugasakhirprogmob
 
-import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
+// --- TAMBAHKAN IMPORT INI ---
+import android.widget.Toast
+// -----------------------------
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -23,6 +23,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
+// --- TAMBAHKAN IMPORT INI ---
+import androidx.compose.ui.platform.LocalContext
+// -----------------------------
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -32,6 +35,9 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.example.tugasakhirprogmob.ui.theme.TugasAkhirProgmobTheme
+// --- TAMBAHKAN IMPORT INI ---
+import com.example.tugasakhirprogmob.viewmodel.CartViewModel
+// -----------------------------
 import com.example.tugasakhirprogmob.viewmodel.Product
 import com.example.tugasakhirprogmob.viewmodel.ProductDetailViewModel
 import com.google.firebase.Timestamp
@@ -39,69 +45,16 @@ import java.text.NumberFormat
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 
-//data class ProductDetail(
-//    val images: List<Int>,
-//    val name: String,
-//    val price: String,
-//    val postDate: String,
-//    val category: String,
-//    val brand: String,
-//    val seller: Seller,
-//    val description: String
-//)
-//
-//data class Seller(
-//    val avatarRes: Int,
-//    val name: String,
-//    val location: String,
-//    val rating: Float,
-//    val reviewCount: Int,
-//    val joinDate: String
-//)
-//
-//// Data sampel untuk digunakan di UI dan preview
-//val sampleSeller = Seller(
-//    avatarRes = R.drawable.pfp1,
-//    name = "Seller Name",
-//    location = "Location",
-//    rating = 4.5f,
-//    reviewCount = 3,
-//    joinDate = "2y,4mo"
-//)
-//
-//val sampleProductDetail = ProductDetail(
-//    images = listOf(
-//        R.drawable.nike,
-//        R.drawable.pfp1,
-//        R.drawable.uniqlo,
-//        R.drawable.pfp1
-//    ),
-//    name = "Very Long Product Name",
-//    price = "$10.99",
-//    postDate = "2 Weeks Ago",
-//    category = "Categories",
-//    brand = "Brand",
-//    seller = sampleSeller,
-//    description = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur."
-//)
-//
-//class ProductDetailPage : ComponentActivity() {
-//    override fun onCreate(savedInstanceState: Bundle?) {
-//        super.onCreate(savedInstanceState)
-//        setContent {
-//            TugasAkhirProgmobTheme {
-//                ProductDetailScreen(product = sampleProductDetail)
-//            }
-//        }
-//    }
-//}
-
+// --- UBAH BAGIAN INI ---
 @Composable
 fun ProductDetailScreen(
     productId: String,
     onBackClick: () -> Unit,
-    viewModel: ProductDetailViewModel = viewModel()
+    viewModel: ProductDetailViewModel = viewModel(),
+    cartViewModel: CartViewModel = viewModel() // Tambahkan parameter ini
 ) {
+    val context = LocalContext.current // Tambahkan ini untuk Toast
+    // ----------------------
     // Ambil data dari ViewModel
     val product by viewModel.product.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
@@ -121,7 +74,19 @@ fun ProductDetailScreen(
                 // Jika produk berhasil diambil, tampilkan kontennya
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                     item { ImageSliderSection(product = product!!, onBackClick = onBackClick) }
-                    item { ProductTitleSection(name = product!!.name, price = product!!.price) }
+                    // --- UBAH BAGIAN INI ---
+                    item {
+                        ProductTitleSection(
+                            name = product!!.name,
+                            price = product!!.price,
+                            onAddToCart = {
+                                cartViewModel.addToCart(product!!)
+                                // Beri feedback ke pengguna
+                                Toast.makeText(context, "${product!!.name} ditambahkan", Toast.LENGTH_SHORT).show()
+                            }
+                        )
+                    }
+                    // -----------------------
                     item { ProductMetadataSection(product = product!!) }
                     item { SellerInfoSection(sellerName = product!!.sellerName) }
                     item { DescriptionSection(description = product!!.description) }
@@ -137,17 +102,12 @@ fun ProductDetailScreen(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ImageSliderSection(product: Product, onBackClick: () -> Unit) {
-    // Logika untuk memilih sumber gambar:
-    // 1. Prioritaskan `imageUrls` jika tidak kosong (data baru).
-    // 2. Jika kosong, gunakan `imageUrl` dari data lama.
-    // `listOfNotNull` akan membuat list berisi satu item jika imageUrl tidak null, atau list kosong jika null.
     val images = if (product.imageUrls.isNotEmpty()) {
         product.imageUrls
     } else {
         listOfNotNull(product.imageUrl)
     }
 
-    // Jika tidak ada gambar sama sekali, tampilkan placeholder
     if (images.isEmpty()) {
         Box(
             modifier = Modifier
@@ -180,7 +140,6 @@ fun ImageSliderSection(product: Product, onBackClick: () -> Unit) {
             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
         }
 
-        // Indikator Pager
         if (images.size > 1) {
             Row(
                 Modifier.align(Alignment.BottomCenter).padding(bottom = 16.dp).background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(12.dp)).padding(horizontal = 8.dp, vertical = 4.dp),
@@ -195,16 +154,14 @@ fun ImageSliderSection(product: Product, onBackClick: () -> Unit) {
     }
 }
 
+// --- UBAH BAGIAN INI ---
 @Composable
-fun ProductTitleSection(name: String, price: Double) {
+fun ProductTitleSection(name: String, price: Double, onAddToCart: () -> Unit) { // Tambahkan parameter onAddToCart
     val formatCurrency = remember { NumberFormat.getCurrencyInstance(Locale("in", "ID")) }
     val formattedPrice = remember(price) {
         try {
-            // Coba format langsung sebagai angka
             formatCurrency.format(price)
         } catch (e: Exception) {
-            // Jika gagal (sangat tidak mungkin jika tipe datanya Double, tapi untuk keamanan),
-            // tampilkan sebagai string biasa.
             "Rp ${price.toLong()}"
         }
     }
@@ -219,9 +176,9 @@ fun ProductTitleSection(name: String, price: Double) {
         }
         Spacer(modifier = Modifier.width(16.dp))
         IconButton(
-            onClick = { /* TODO: Handle Add to Cart */ },
+            onClick = { onAddToCart() }, // Panggil lambda di sini
             modifier = Modifier
-                .size(56.dp) // Ukuran tombolnya
+                .size(56.dp)
                 .background(Color.Black, RoundedCornerShape(16.dp))
         ) {
             Icon(
@@ -233,10 +190,13 @@ fun ProductTitleSection(name: String, price: Double) {
         }
     }
 }
+// -----------------------
+
+// ... Sisa kode dari SellerInfoSection, DescriptionSection, dan InfoChip tidak perlu diubah, biarkan seperti aslinya.
+// Di bawah ini adalah sisa kode yang tidak berubah.
 
 @Composable
 fun ProductMetadataSection(product: Product) {
-    // Helper untuk mengubah Timestamp menjadi teks "x days ago"
     fun formatPostDate(timestamp: Timestamp?): String {
         if (timestamp == null) return "N/A"
         val now = Timestamp.now().seconds
@@ -274,56 +234,11 @@ fun SellerInfoSection(sellerName: String) {
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(text = sellerName, fontWeight = FontWeight.Bold)
-                Text(text = "Location", style = MaterialTheme.typography.bodySmall, color = Color.Gray) // Placeholder
+                Text(text = "Location", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
             }
-            // ... (Info rating dan join date bisa ditambahkan jika data seller diambil terpisah)
         }
     }
 }
-
-//@Composable
-//fun SellerInfoSection(sellerName: String) {
-//    Card(
-//        modifier = Modifier
-//            .fillMaxWidth()
-//            .padding(16.dp),
-//        shape = RoundedCornerShape(12.dp),
-//        colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5)),
-//        elevation = CardDefaults.cardElevation(0.dp)
-//    ) {
-//        Row(
-//            modifier = Modifier
-//                .fillMaxWidth()
-//                .padding(12.dp),
-//            verticalAlignment = Alignment.CenterVertically
-//        ) {
-//            Image(
-//                painter = painterResource(id = seller.avatarRes),
-//                contentDescription = "Seller Avatar",
-//                modifier = Modifier
-//                    .size(50.dp)
-//                    .clip(CircleShape)
-//            )
-//            Spacer(modifier = Modifier.width(12.dp))
-//            Column(modifier = Modifier.weight(1f)) {
-//                Text(text = seller.name, fontWeight = FontWeight.Bold)
-//                Text(text = seller.location, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-//            }
-//            Column(horizontalAlignment = Alignment.End) {
-//                Row(verticalAlignment = Alignment.CenterVertically) {
-//                    Text(text = seller.rating.toString(), fontWeight = FontWeight.Bold)
-//                    Icon(Icons.Default.Star, contentDescription = "Rating", tint = Color(0xFFFFC107), modifier = Modifier.size(16.dp))
-//                }
-//                Text(text = "${seller.reviewCount} Reviews", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-//            }
-//            Spacer(modifier = Modifier.width(12.dp))
-//            Column(horizontalAlignment = Alignment.End) {
-//                Text(text = seller.joinDate, fontWeight = FontWeight.Bold)
-//                Text(text = "Joined", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-//            }
-//        }
-//    }
-//}
 
 @Composable
 fun DescriptionSection(description: String) {
@@ -337,7 +252,7 @@ fun DescriptionSection(description: String) {
         Text(
             text = description,
             style = MaterialTheme.typography.bodyMedium,
-            lineHeight = 22.sp, // Memberi jarak antar baris agar mudah dibaca
+            lineHeight = 22.sp,
             color = Color.Gray
         )
     }
@@ -360,17 +275,3 @@ fun InfoChip(
         Text(text = text, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
     }
 }
-
-//@Preview(showBackground = true, showSystemUi = true)
-//@Composable
-//fun ProductDetailScreenPreview() {
-//    TugasAkhirProgmobTheme {
-//        ProductDetailScreen(
-//            product = sampleProductDetail,
-//            productId = TODO(),
-//            onBackClick = TODO(),
-//            viewModel = TODO()
-//        )
-//    }
-//}
-

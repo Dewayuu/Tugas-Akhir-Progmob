@@ -67,6 +67,16 @@ data class ProductRequest(
     val postedAt: FieldValue = FieldValue.serverTimestamp()
 )
 
+// --- TAMBAHKAN KODE BARU DI SINI ---
+data class CartItem(
+    val id: String = "", // Akan diisi otomatis oleh Firestore
+    val productId: String = "",
+    val name: String = "",
+    val price: Double = 0.0,
+    val imageUrl: String = "",
+    var quantity: Int = 1 // Gunakan 'var' agar kuantitas bisa diubah nanti
+)
+// ------------------------------------
 
 class ProductViewModel : ViewModel() {
 

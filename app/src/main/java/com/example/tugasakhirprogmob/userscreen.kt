@@ -332,6 +332,33 @@ fun DefaultUserProfileContent(
                 Spacer(modifier = Modifier.height(16.dp))
             }
         }
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp)
+                .clickable { navController.navigate("order_history") }, // Aksi navigasi
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(2.dp)
+        ) {
+            Row(
+                modifier = Modifier.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.history), // Ganti dengan ikon history Anda
+                    contentDescription = "Riwayat Pesanan",
+                    modifier = Modifier.size(24.dp) // Ukuran ikon diperkecil
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+                Text("Riwayat Pesanan", fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                Icon(
+                    painter = painterResource(id = R.drawable.kanan), // Ganti dengan ikon panah kanan
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        }
 
         // 📦 Listing Card di bawah, background abu muda
         Card(

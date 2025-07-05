@@ -14,7 +14,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.util.Date
 
-// Data class untuk item di keranjang
+// --- DATA CLASS DITEMPATKAN DI SINI ---
 data class CartItem(
     val id: String = "",
     val productId: String = "",
@@ -24,7 +24,6 @@ data class CartItem(
     var quantity: Int = 1
 )
 
-// Data class untuk merepresentasikan sebuah pesanan
 data class Order(
     val orderId: String = "",
     val userId: String = "",
@@ -34,7 +33,6 @@ data class Order(
     @ServerTimestamp
     val createdAt: Date? = null
 )
-
 
 class CartViewModel : ViewModel() {
 

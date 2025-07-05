@@ -150,6 +150,23 @@ fun MainApp() {
             CheckoutScreen(navController = navController)
         }
 
+        composable("order_history") {
+            OrderHistoryScreen(navController = navController)
+        }
+
+        composable(
+            "payment/{orderId}",
+            arguments = listOf(navArgument("orderId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            PaymentScreen(
+                navController = navController,
+                orderId = backStackEntry.arguments?.getString("orderId") ?: ""
+            )
+        }
+
+        composable("order_success") {
+            OrderSuccessScreen(navController = navController)
+        }
         composable(
             route = "productDetail/{productId}",
             arguments = listOf(navArgument("productId") { type = NavType.StringType })

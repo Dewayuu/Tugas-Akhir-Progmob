@@ -9,6 +9,8 @@ import com.cloudinary.android.MediaManager
 import com.cloudinary.android.callback.ErrorInfo
 import com.cloudinary.android.callback.UploadCallback
 import com.google.firebase.auth.ktx.auth
+import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.firestore.ktx.toObject
 import com.google.firebase.ktx.Firebase
@@ -19,10 +21,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.tasks.await
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
-import com.google.firebase.firestore.FieldValue
 
-
-// Data class untuk menampung data profil yang akan ditampilkan di UI
 data class UserProfile(
     val uid: String = "",
     val name: String = "",
@@ -48,7 +47,14 @@ class ProfileViewModel : ViewModel() {
     private val _updateSuccess = MutableStateFlow(false)
     val updateSuccess: StateFlow<Boolean> = _updateSuccess
 
-    // Mengambil data profil pengguna yang sedang login
+    private val _orders = MutableStateFlow<List<Order>>(emptyList())
+    val orders: StateFlow<List<Order>> = _orders
+
+    // --- TAMBAHKAN STATE BARU INI ---
+    private val _paymentSuccess = MutableStateFlow(false)
+    val paymentSuccess: StateFlow<Boolean> = _paymentSuccess
+    // ---------------------------------
+
     fun fetchUserProfile() {
         val userId = auth.currentUser?.uid ?: return
         viewModelScope.launch {
@@ -64,7 +70,49 @@ class ProfileViewModel : ViewModel() {
         }
     }
 
-    // Memperbarui data profil
+    fun fetchUserOrders() {
+        val userId = auth.currentUser?.uid ?: return
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                val ordersSnapshot = db.collection("orders")
+                    .whereEqualTo("userId", userId)
+                    .orderBy("createdAt", Query.Direction.DESCENDING)
+                    .get()
+                    .await()
+                val orderList = ordersSnapshot.documents.mapNotNull { doc ->
+                    doc.toObject(Order::class.java)?.copy(orderId = doc.id)
+                }
+                _orders.value = orderList
+            } catch (e: Exception) {
+                Log.e("ProfileViewModel", "Error fetching user orders", e)
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    // --- TAMBAHKAN FUNGSI BARU INI ---
+    fun confirmPayment(orderId: String) {
+        viewModelScope.launch {
+            try {
+                db.collection("orders").document(orderId)
+                    .update("status", "Lunas")
+                    .await()
+                _paymentSuccess.value = true
+                // Refresh daftar pesanan setelah update
+                fetchUserOrders()
+            } catch (e: Exception) {
+                Log.e("ProfileViewModel", "Error confirming payment", e)
+            }
+        }
+    }
+
+    fun resetPaymentStatus() {
+        _paymentSuccess.value = false
+    }
+    // ---------------------------------
+
     fun updateProfile(
         context: Context,
         newName: String,
@@ -80,44 +128,28 @@ class ProfileViewModel : ViewModel() {
         viewModelScope.launch {
             _isLoading.value = true
             _updateSuccess.value = false
-
             try {
-                // Siapkan map untuk menampung data yang akan diupdate
                 val updates = mutableMapOf<String, Any>()
-
                 if (removeProfilePic) {
                     updates["profilePictureUrl"] = FieldValue.delete()
                 } else if (newProfilePicUri != null) {
                     val imageUrl = uploadImageToCloudinary(context, newProfilePicUri, "profile_pictures")
                     updates["profilePictureUrl"] = imageUrl
                 }
-
-                // 1. Cek dan unggah foto profil jika ada yang baru
-                if (newProfilePicUri != null) {
-                    val imageUrl = uploadImageToCloudinary(context, newProfilePicUri, "profile_pictures")
-                    updates["profilePictureUrl"] = imageUrl
-                }
-
-                // 2. Cek dan unggah banner jika ada yang baru
                 if (removeBanner) {
                     updates["bannerUrl"] = FieldValue.delete()
                 } else if (newBannerUri != null) {
                     val bannerUrl = uploadImageToCloudinary(context, newBannerUri, "banners")
                     updates["bannerUrl"] = bannerUrl
                 }
-
-                // 3. Tambahkan data teks ke dalam map
                 updates["name"] = newName
                 updates["bio"] = newBio
                 updates["address"] = newAddress
                 updates["phoneNumber"] = newPhoneNumber
-
-                // 4. Lakukan update ke Firestore
                 if (updates.isNotEmpty()) {
                     db.collection("users").document(userId).update(updates).await()
                 }
                 _updateSuccess.value = true
-
             } catch (e: Exception) {
                 Log.e("ProfileViewModel", "Error updating profile", e)
             } finally {
@@ -126,14 +158,11 @@ class ProfileViewModel : ViewModel() {
         }
     }
 
-    // Fungsi helper untuk unggah gambar ke Cloudinary
     private suspend fun uploadImageToCloudinary(context: Context, imageUri: Uri, folder: String): String {
-        // Inisialisasi Cloudinary jika belum
         CloudinaryManager.init(context.applicationContext)
-
         return suspendCancellableCoroutine { continuation ->
             MediaManager.get().upload(imageUri)
-                .option("folder", folder) // Simpan di folder yang ditentukan
+                .option("folder", folder)
                 .callback(object : UploadCallback {
                     override fun onSuccess(requestId: String?, resultData: MutableMap<Any?, Any?>?) {
                         val url = resultData?.get("secure_url") as? String
@@ -143,7 +172,6 @@ class ProfileViewModel : ViewModel() {
                             continuation.resumeWithException(Exception("Cloudinary URL is null"))
                         }
                     }
-
                     override fun onError(requestId: String?, error: ErrorInfo?) {
                         continuation.resumeWithException(Exception(error?.description ?: "Unknown Cloudinary error"))
                     }

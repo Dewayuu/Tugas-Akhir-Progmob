@@ -65,14 +65,19 @@ fun CheckoutScreen(
     // State untuk loading overlay
     var isLoading by remember { mutableStateOf(false) }
 
-    // Efek ini akan berjalan ketika `orderPlaced` menjadi true
+    // Di dalam CheckoutScreen, cari LaunchedEffect
+
     LaunchedEffect(orderPlaced) {
         if (orderPlaced) {
             isLoading = false
             Toast.makeText(context, "Pesanan berhasil dibuat!", Toast.LENGTH_LONG).show()
             cartViewModel.resetOrderStatus()
-            // Kembali ke halaman utama setelah berhasil
-            navController.popBackStack(Screen.Home.route, inclusive = false)
+            // Pindah ke halaman sukses dan bersihkan tumpukan navigasi sebelumnya
+            navController.navigate("order_success") {
+                popUpTo(Screen.Home.route) {
+                    inclusive = false
+                }
+            }
         }
     }
 

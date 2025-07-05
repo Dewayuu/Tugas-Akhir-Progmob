@@ -142,6 +142,9 @@ fun MainApp() {
                 profileViewModel = profileViewModel
             )
         }
+        composable("order_success") {
+            OrderSuccessScreen(navController = navController)
+        }
 
         composable("checkout") {
             CheckoutScreen(navController = navController)

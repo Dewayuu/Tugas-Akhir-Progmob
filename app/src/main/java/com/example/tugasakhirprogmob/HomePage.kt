@@ -1,5 +1,6 @@
 package com.example.tugasakhirprogmob
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -63,6 +64,7 @@ import java.text.NumberFormat
 import java.util.Locale
 
 
+
 // Wrapper utama aplikasi dengan Navigasi.
 // Ini bisa berada di MainActivity.kt atau di sini.
 // Kita tidak mengubah bagian ini, sesuai permintaan Anda.
@@ -116,11 +118,13 @@ fun MainApp() {
         }
         composable(Screen.Cart.route) {
             ViewCartScreen(
+                navController = navController, // Teruskan navController
                 onBackClick = {
                     navController.popBackStack()
                 }
             )
         }
+
         composable(Screen.Profile.route) {
             UserProfileScreen(
                 navController = navController,
@@ -138,6 +142,11 @@ fun MainApp() {
                 profileViewModel = profileViewModel
             )
         }
+
+        composable("checkout") {
+            CheckoutScreen(navController = navController)
+        }
+
         composable(
             route = "productDetail/{productId}",
             arguments = listOf(navArgument("productId") { type = NavType.StringType })
@@ -449,7 +458,7 @@ fun CategoryRow() {
     }
 }
 
-
+@SuppressLint("ViewModelConstructorInComposable")
 @Preview(showBackground = true)
 @Composable
 fun HomeScreenPreview() {

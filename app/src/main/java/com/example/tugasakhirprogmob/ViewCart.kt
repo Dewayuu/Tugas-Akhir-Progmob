@@ -22,6 +22,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import coil.compose.AsyncImage
 import com.example.tugasakhirprogmob.ui.theme.TugasAkhirProgmobTheme
 import com.example.tugasakhirprogmob.viewmodel.CartItem
@@ -32,6 +34,7 @@ import java.util.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ViewCartScreen(
+    navController: NavController, // Tambahkan ini
     onBackClick: () -> Unit,
     cartViewModel: CartViewModel = viewModel()
 ) {
@@ -132,7 +135,7 @@ fun ViewCartScreen(
                 Spacer(Modifier.height(16.dp))
 
                 Button(
-                    onClick = { /* TODO: Navigasi ke Halaman Checkout */ },
+                    onClick = { navController.navigate("checkout") },
                     colors = ButtonDefaults.buttonColors(containerColor = Color.Black),
                     shape = RoundedCornerShape(8.dp),
                     // Tombol nonaktif jika keranjang kosong
@@ -223,6 +226,11 @@ fun DynamicCartItem(
 @Composable
 fun ViewCartScreenPreview() {
     TugasAkhirProgmobTheme {
-        ViewCartScreen(onBackClick = {})
+        // Kita buat NavController palsu (dummy) khusus untuk preview
+        val dummyNavController = rememberNavController()
+        ViewCartScreen(
+            navController = dummyNavController, // Berikan dummy NavController
+            onBackClick = {}
+        )
     }
 }

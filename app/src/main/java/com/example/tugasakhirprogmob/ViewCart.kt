@@ -200,7 +200,7 @@ fun DynamicCartItem(
             verticalArrangement = Arrangement.spacedBy(4.dp),
             modifier = Modifier.padding(start = 8.dp)
         ) {
-            IconButton(onClick = onIncrease, modifier = Modifier.size(32.dp)) {
+            IconButton(onClick = onIncrease, modifier = Modifier.size(20.dp)) {
                 Icon(
                     painter = painterResource(id = R.drawable.plus),
                     contentDescription = "Increase quantity"
@@ -211,7 +211,7 @@ fun DynamicCartItem(
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold
             )
-            IconButton(onClick = onDecrease, modifier = Modifier.size(32.dp)) {
+            IconButton(onClick = onDecrease, modifier = Modifier.size(20.dp)) {
                 Icon(
                     painter = painterResource(id = R.drawable.minus),
                     contentDescription = "Decrease quantity"

@@ -367,14 +367,14 @@ fun DefaultUserProfileContent(
                 Icon(
                     painter = painterResource(id = R.drawable.history),
                     contentDescription = "Riwayat Pesanan",
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(10.dp)
                 )
                 Spacer(modifier = Modifier.width(16.dp))
                 Text("Riwayat Pesanan", fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
                 Icon(
                     painter = painterResource(id = R.drawable.kanan),
                     contentDescription = null,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(10.dp)
                 )
             }
         }

@@ -172,12 +172,43 @@ fun UserProfileScreen(
 }
 
 @Composable
+private fun DeleteConfirmationDialog(
+    productName: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Konfirmasi Hapus") },
+        text = { Text("Apakah Anda yakin ingin menghapus produk \"$productName\"?") },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+            ) {
+                Text("Hapus")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Batal")
+
+
+            }
+        }
+    )
+}
+
+@Composable
 fun DefaultUserProfileContent(
     navController: NavController,
     userProducts: List<Product>,
     productViewModel: ProductViewModel,
     userProfile: UserProfile?
 ) {
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var productToDelete by remember { mutableStateOf<Product?>(null) }
+
     val addCardText = if (userProducts.isEmpty()) {
         "Start Selling"
     } else {
@@ -198,15 +229,11 @@ fun DefaultUserProfileContent(
             AsyncImage(
                 model = userProfile?.bannerUrl,
                 contentDescription = "User Banner",
-                // Crop akan memastikan gambar memenuhi area tanpa distorsi
                 contentScale = ContentScale.Crop,
-                // matchParentSize akan membuat gambar memenuhi ukuran Box
                 modifier = Modifier.matchParentSize()
             )
             Column {
                 Spacer(modifier = Modifier.height(15.dp))
-
-                // 👤 Profile Card
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -221,7 +248,6 @@ fun DefaultUserProfileContent(
                             .padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Foto profil placeholder
                         Box(
                             modifier = Modifier
                                 .size(64.dp)
@@ -240,19 +266,17 @@ fun DefaultUserProfileContent(
 
                         Spacer(modifier = Modifier.width(12.dp))
 
-                        // Kolom kiri: nama & lokasi
                         Column(modifier = Modifier.weight(1f)) {
                             Text(userProfile?.name ?: "Loading...", style = MaterialTheme.typography.titleMedium)
                             Text(userProfile?.address ?: "", style = MaterialTheme.typography.bodySmall, color = Color.DarkGray)
                         }
 
-                        // Kolom tengah: rating & reviews
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text("4,5", style = MaterialTheme.typography.bodyMedium)
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Icon(
-                                    painter = painterResource(id = R.drawable.star), // ganti dengan ikon star kamu
+                                    painter = painterResource(id = R.drawable.star),
                                     contentDescription = null,
                                     tint = Color(0xFF4C4F5E),
                                     modifier = Modifier.size(16.dp)
@@ -261,7 +285,6 @@ fun DefaultUserProfileContent(
                             Text("3 Reviews", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
                         }
 
-                        // Garis pemisah vertikal
                         Spacer(modifier = Modifier.width(12.dp))
                         Box(
                             modifier = Modifier
@@ -271,21 +294,18 @@ fun DefaultUserProfileContent(
                         )
                         Spacer(modifier = Modifier.width(12.dp))
 
-                        // Kolom kanan: lama join
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("2y,4mo", style = MaterialTheme.typography.bodyMedium)
                             Text("Joined", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
                         }
 
-                        // Spacer ke kanan
                         Spacer(modifier = Modifier.width(12.dp))
 
-                        // Tombol Edit & Logout
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             listOf(R.drawable.edit2 to "Edit", R.drawable.logout to "Logout").forEach { (iconId, desc) ->
                                 Box(
                                     modifier = Modifier
-                                        .size(36.dp) // Ukuran kotak tombol
+                                        .size(36.dp)
                                         .background(Color(0xFFB0B0B0), shape = RoundedCornerShape(8.dp))
                                         .clickable {
                                             when (desc) {
@@ -293,7 +313,7 @@ fun DefaultUserProfileContent(
                                                     navController.navigate(Screen.EditProfile.route)
                                                 }
                                                 "Logout" -> {
-                                                    // TODO: Tambahkan logika untuk logout di sini nanti
+                                                    // TODO: Tambahkan logika logout
                                                 }
                                             }
                                         },
@@ -303,18 +323,16 @@ fun DefaultUserProfileContent(
                                         painter = painterResource(id = iconId),
                                         contentDescription = desc,
                                         tint = Color.Black,
-                                        modifier = Modifier.size(18.dp) // Ukuran ikon di tengah kotak
+                                        modifier = Modifier.size(18.dp)
                                     )
                                 }
                             }
                         }
-
                     }
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // ℹ️ About Card
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -332,11 +350,12 @@ fun DefaultUserProfileContent(
                 Spacer(modifier = Modifier.height(16.dp))
             }
         }
+
         Card(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp)
-                .clickable { navController.navigate("order_history") }, // Aksi navigasi
+                .clickable { navController.navigate("order_history") },
             shape = RoundedCornerShape(12.dp),
             colors = CardDefaults.cardColors(containerColor = Color.White),
             elevation = CardDefaults.cardElevation(2.dp)
@@ -346,28 +365,27 @@ fun DefaultUserProfileContent(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
-                    painter = painterResource(id = R.drawable.history), // Ganti dengan ikon history Anda
+                    painter = painterResource(id = R.drawable.history),
                     contentDescription = "Riwayat Pesanan",
-                    modifier = Modifier.size(24.dp) // Ukuran ikon diperkecil
+                    modifier = Modifier.size(24.dp)
                 )
                 Spacer(modifier = Modifier.width(16.dp))
                 Text("Riwayat Pesanan", fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
                 Icon(
-                    painter = painterResource(id = R.drawable.kanan), // Ganti dengan ikon panah kanan
+                    painter = painterResource(id = R.drawable.kanan),
                     contentDescription = null,
                     modifier = Modifier.size(24.dp)
                 )
             }
         }
 
-        // 📦 Listing Card di bawah, background abu muda
         Card(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp, vertical = 16.dp),
             shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFFD8D8D8)), // Warna disamakan
-            elevation = CardDefaults.cardElevation(0.dp) // Tanpa shadow
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFD8D8D8)),
+            elevation = CardDefaults.cardElevation(0.dp)
         ) {
             Column(
                 modifier = Modifier.padding(16.dp)
@@ -388,7 +406,10 @@ fun DefaultUserProfileContent(
                                 navController.navigate("productDetail/${product.id}")
                             },
                             onEditClick = { /* TODO */ },
-                            onDeleteClick = { productViewModel.deleteProduct(product.id) }
+                            onDeleteClick = {
+                                productToDelete = product
+                                showDeleteDialog = true
+                            }
                         )
                     }
                     item {
@@ -398,7 +419,23 @@ fun DefaultUserProfileContent(
             }
         }
     }
+
+    if (showDeleteDialog && productToDelete != null) {
+        DeleteConfirmationDialog(
+            productName = productToDelete!!.name,
+            onConfirm = {
+                productViewModel.deleteProduct(productToDelete!!.id)
+                showDeleteDialog = false
+                productToDelete = null
+            },
+            onDismiss = {
+                showDeleteDialog = false
+                productToDelete = null
+            }
+        )
+    }
 }
+
 
 @Composable
 fun UserProductCard(

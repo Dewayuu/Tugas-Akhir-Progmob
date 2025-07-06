@@ -34,10 +34,10 @@ data class Order(
     val createdAt: Date? = null,
     val receiverName: String? = null,
 
-    val alamatPengiriman: String = "Jalan Raya Kuta No. 123, Badung, Bali", // Placeholder
+    var alamatPengiriman: String = "",
     var statusPengiriman: String = "Menunggu Pembayaran",
-    var nomorResi: String? = null
-
+    var nomorResi: String? = null,
+    var metodePengiriman: String = ""
 )
 
 class CartViewModel : ViewModel() {
@@ -61,21 +61,24 @@ class CartViewModel : ViewModel() {
         listenForCartChanges()
     }
 
-    // --- FUNGSI BARU UNTUK MEMBUAT PESANAN ---
-    fun placeOrder() {
+    fun placeOrder(alamat: String, metodePengiriman: String, totalDenganPengiriman: Double) {
         val userId = auth.currentUser?.uid
         if (userId == null || _cartItems.value.isEmpty()) {
-            return // Jangan lakukan apa-apa jika user tidak login atau keranjang kosong
+            return
         }
 
         viewModelScope.launch {
             try {
-                // 1. Buat objek Order baru
+                // 1. Buat objek Order baru dengan data dinamis
                 val newOrder = Order(
                     userId = userId,
-                    items = _cartItems.value, // Salin semua item dari keranjang
-                    totalPrice = _subtotal.value,
-                    status = "Pending"
+                    items = _cartItems.value,
+                    totalPrice = totalDenganPengiriman, // Gunakan total harga baru
+                    status = "Pending",
+                    alamatPengiriman = alamat, // Gunakan alamat dari parameter
+                    metodePengiriman = metodePengiriman, // Gunakan metode dari parameter
+                    statusPengiriman = "Menunggu Pembayaran",
+                    receiverName = auth.currentUser?.displayName ?: "Pengguna"
                 )
 
                 // 2. Simpan order baru ke koleksi 'orders'

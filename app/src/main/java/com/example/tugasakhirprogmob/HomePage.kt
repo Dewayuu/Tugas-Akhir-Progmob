@@ -162,8 +162,13 @@ fun MainApp() {
         }
 
         composable("checkout") {
-            CheckoutScreen(navController = navController)
+            CheckoutScreen(
+                navController = navController,
+                cartViewModel = viewModel(), // Ambil instance CartViewModel
+                profileViewModel = profileViewModel // Teruskan instance ProfileViewModel yang sudah ada
+            )
         }
+
         composable("order_history") {
             OrderHistoryScreen(navController = navController)
         }

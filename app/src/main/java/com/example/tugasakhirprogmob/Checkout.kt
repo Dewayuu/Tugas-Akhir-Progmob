@@ -1,32 +1,16 @@
 package com.example.tugasakhirprogmob
 
 import android.widget.Toast
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -36,47 +20,62 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import coil.compose.AsyncImage
-import com.example.tugasakhirprogmob.ui.theme.TugasAkhirProgmobTheme
 import com.example.tugasakhirprogmob.viewmodel.CartItem
 import com.example.tugasakhirprogmob.viewmodel.CartViewModel
+import com.example.tugasakhirprogmob.viewmodel.ProfileViewModel
 import java.text.NumberFormat
-import java.util.Locale
+import java.util.*
+
+// Data class untuk opsi pengiriman
+data class ShippingOption(val name: String, val duration: String, val cost: Double)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CheckoutScreen(
     navController: NavController,
-    cartViewModel: CartViewModel = viewModel()
+    cartViewModel: CartViewModel = viewModel(),
+    profileViewModel: ProfileViewModel = viewModel()
 ) {
     val context = LocalContext.current
     val cartItems by cartViewModel.cartItems.collectAsStateWithLifecycle()
     val subtotal by cartViewModel.subtotal.collectAsStateWithLifecycle()
     val orderPlaced by cartViewModel.orderPlacedSuccessfully.collectAsStateWithLifecycle()
-    val formatCurrency = remember { NumberFormat.getCurrencyInstance(Locale("in", "ID")) }
+    val userProfile by profileViewModel.userProfile.collectAsStateWithLifecycle()
 
-    // State untuk loading overlay
+    val formatCurrency = remember { NumberFormat.getCurrencyInstance(Locale("in", "ID")) }
     var isLoading by remember { mutableStateOf(false) }
 
-    // Di dalam CheckoutScreen, cari LaunchedEffect
+    // --- STATE UNTUK ALAMAT & PENGIRIMAN ---
+    var showAddressDialog by remember { mutableStateOf(false) }
+    var manualAddress by remember { mutableStateOf("") }
 
+    val shippingOptions = listOf(
+        ShippingOption("Reguler", "3-5 Hari Kerja", 0.0),
+        ShippingOption("Express", "1-2 Hari Kerja", 15000.0)
+    )
+    var selectedShipping by remember { mutableStateOf(shippingOptions.first()) }
+    val total = subtotal + selectedShipping.cost + 1000.0 // +1000 untuk platform fee
+    // ------------------------------------------
+
+    // Ambil data profil saat layar pertama kali dibuka
+    LaunchedEffect(Unit) {
+        profileViewModel.fetchUserProfile()
+    }
+
+    // Navigasi setelah pesanan berhasil dibuat
     LaunchedEffect(orderPlaced) {
         if (orderPlaced) {
             isLoading = false
             Toast.makeText(context, "Pesanan berhasil dibuat!", Toast.LENGTH_LONG).show()
             cartViewModel.resetOrderStatus()
-            // Pindah ke halaman sukses dan bersihkan tumpukan navigasi sebelumnya
             navController.navigate("order_success") {
-                popUpTo(Screen.Home.route) {
-                    inclusive = false
-                }
+                popUpTo(Screen.Home.route) { inclusive = false }
             }
         }
     }
@@ -84,17 +83,17 @@ fun CheckoutScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(text = "Order Summary", textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) },
+                title = { Text("Ringkasan Pesanan", textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(painter = painterResource(id = R.drawable.back), contentDescription = "Back")
                     }
                 },
-                actions = { Spacer(modifier = Modifier.width(48.dp)) },
+                actions = { Spacer(Modifier.width(48.dp)) },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
             )
         },
-        containerColor = Color.White
+        containerColor = Color(0xFFF5F7F9)
     ) { innerPadding ->
         Box(modifier = Modifier.fillMaxSize()) {
             Column(
@@ -102,16 +101,21 @@ fun CheckoutScreen(
                     .fillMaxSize()
                     .padding(innerPadding)
             ) {
-                LazyColumn(modifier = Modifier.weight(1f)) {
-                    item { AddressSection() }
-                    item { DeliverySection() }
-                    item { Spacer(modifier = Modifier.height(16.dp)) }
+                LazyColumn(modifier = Modifier.weight(1f), contentPadding = PaddingValues(vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    item {
+                        AddressSection(
+                            profileAddress = userProfile?.address,
+                            manualAddress = manualAddress,
+                            onEditClick = { showAddressDialog = true }
+                        )
+                    }
+                    item { DeliverySection(options = shippingOptions, selected = selectedShipping, onOptionSelected = { selectedShipping = it }) }
                     item {
                         Text(
-                            "Produk",
+                            "Produk Dipesan",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 16.dp)
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                         )
                     }
                     items(cartItems) { item ->
@@ -119,52 +123,57 @@ fun CheckoutScreen(
                     }
                 }
 
-                // Order summary
-                OrderSummary(
-                    cartItems = cartItems,
-                    subtotal = subtotal,
-                    delivery = 0.0, // Placeholder
-                    platformFee = 1000.0, // Placeholder
-                    total = subtotal + 1000.0,
-                    formatCurrency = formatCurrency
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Order button
-                Column(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                ) {
+                // Bagian bawah layar
+                Column(Modifier.background(Color.White)) {
+                    OrderSummary(
+                        itemCount = cartItems.sumOf { it.quantity },
+                        subtotal = subtotal,
+                        delivery = selectedShipping.cost,
+                        platformFee = 1000.0,
+                        total = total,
+                        formatCurrency = formatCurrency
+                    )
                     Button(
                         onClick = {
+                            val finalAddress = if (manualAddress.isNotBlank()) manualAddress else userProfile?.address
+                            if (finalAddress.isNullOrBlank()) {
+                                Toast.makeText(context, "Mohon atur alamat pengiriman", Toast.LENGTH_LONG).show()
+                                return@Button
+                            }
                             isLoading = true
-                            cartViewModel.placeOrder()
+                            cartViewModel.placeOrder(
+                                alamat = finalAddress,
+                                metodePengiriman = selectedShipping.name,
+                                totalDenganPengiriman = total
+                            )
                         },
                         enabled = cartItems.isNotEmpty() && !isLoading,
                         colors = ButtonDefaults.buttonColors(containerColor = Color.Black),
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RoundedCornerShape(12.dp),
                         modifier = Modifier
                             .fillMaxWidth()
+                            .padding(16.dp)
                             .height(48.dp)
                     ) {
-                        Text(
-                            text = "Buat Pesanan (Simulasi)",
-                            color = Color.White,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Medium
-                        )
+                        Text("Buat Pesanan", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium)
                     }
-                    Spacer(modifier = Modifier.height(24.dp))
                 }
+            }
+
+            if (showAddressDialog) {
+                ManualAddressDialog(
+                    onDismissRequest = { showAddressDialog = false },
+                    onAddressConfirmed = {
+                        manualAddress = it
+                        showAddressDialog = false
+                    },
+                    initialAddress = if (manualAddress.isNotBlank()) manualAddress else (userProfile?.address ?: "")
+                )
             }
 
             if (isLoading) {
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.5f)),
+                    modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)),
                     contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator(color = Color.White)
@@ -175,11 +184,62 @@ fun CheckoutScreen(
 }
 
 @Composable
-fun CheckoutProductItem(cartItem: CartItem, formatCurrency: NumberFormat) {
+private fun AddressSection(profileAddress: String?, manualAddress: String, onEditClick: () -> Unit) {
+    val displayAddress = if (manualAddress.isNotBlank()) manualAddress else profileAddress
+    Column(Modifier.padding(horizontal = 16.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text("Alamat Pengiriman", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            TextButton(onClick = onEditClick) {
+                Text("Ubah")
+            }
+        }
+        Text(displayAddress ?: "Alamat belum diatur.", color = if (displayAddress.isNullOrBlank()) Color.Red else Color.Black)
+    }
+}
+
+@Composable
+private fun DeliverySection(
+    options: List<ShippingOption>,
+    selected: ShippingOption,
+    onOptionSelected: (ShippingOption) -> Unit
+) {
+    val formatCurrency = remember { NumberFormat.getCurrencyInstance(Locale("in", "ID")) }
+    Column(Modifier.padding(horizontal = 16.dp)) {
+        Text("Metode Pengiriman", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(8.dp))
+        options.forEach { option ->
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .selectable(
+                        selected = (option == selected),
+                        onClick = { onOptionSelected(option) }
+                    )
+                    .padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                RadioButton(
+                    selected = (option == selected),
+                    onClick = { onOptionSelected(option) }
+                )
+                Spacer(Modifier.width(8.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(option.name, fontWeight = FontWeight.SemiBold)
+                    Text(option.duration, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                }
+                Text(
+                    if (option.cost == 0.0) "Gratis" else formatCurrency.format(option.cost),
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CheckoutProductItem(cartItem: CartItem, formatCurrency: NumberFormat) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+        modifier = Modifier.padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         AsyncImage(
@@ -187,40 +247,21 @@ fun CheckoutProductItem(cartItem: CartItem, formatCurrency: NumberFormat) {
             contentDescription = cartItem.name,
             contentScale = ContentScale.Crop,
             modifier = Modifier
-                .size(80.dp)
+                .size(64.dp)
                 .clip(RoundedCornerShape(8.dp))
         )
-        Spacer(modifier = Modifier.width(12.dp))
-        Column(
-            verticalArrangement = Arrangement.Center,
-            modifier = Modifier
-                .height(80.dp)
-                .weight(1f)
-        ) {
-            Text(
-                text = cartItem.name,
-                fontSize = 16.sp,
-                color = Color.Black,
-                fontWeight = FontWeight.SemiBold
-            )
-            Text(
-                text = formatCurrency.format(cartItem.price),
-                fontSize = 14.sp,
-                color = Color.Gray
-            )
+        Spacer(Modifier.width(16.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(cartItem.name, fontWeight = FontWeight.SemiBold)
+            Text("${cartItem.quantity} produk", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
         }
-        Text(
-            text = "${cartItem.quantity}x",
-            fontSize = 14.sp,
-            color = Color.Gray,
-            modifier = Modifier.align(Alignment.CenterVertically)
-        )
+        Text(formatCurrency.format(cartItem.price * cartItem.quantity))
     }
 }
 
 @Composable
-fun OrderSummary(
-    cartItems: List<CartItem>,
+private fun OrderSummary(
+    itemCount: Int,
     subtotal: Double,
     delivery: Double,
     platformFee: Double,
@@ -230,74 +271,55 @@ fun OrderSummary(
     Column(
         Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp)
+            .padding(16.dp)
     ) {
-        Text(
-            text = "Total summary",
-            color = Color.Black,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.padding(bottom = 12.dp)
-        )
-        SummaryRow(label = "Subtotal (${cartItems.sumOf { it.quantity }})", value = formatCurrency.format(subtotal))
-        SummaryRow(label = "Delivery", value = if (delivery == 0.0) "Free" else formatCurrency.format(delivery))
-        SummaryRow(label = "Platform fee", value = formatCurrency.format(platformFee))
+        Text("Ringkasan Belanja", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+        Spacer(Modifier.height(8.dp))
+        SummaryRow(label = "Subtotal ($itemCount produk)", value = formatCurrency.format(subtotal))
+        SummaryRow(label = "Biaya Pengiriman", value = if (delivery == 0.0) "Gratis" else formatCurrency.format(delivery))
+        SummaryRow(label = "Biaya Jasa Aplikasi", value = formatCurrency.format(platformFee))
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-        SummaryRow(label = "Total", value = formatCurrency.format(total), isBold = true)
+        SummaryRow(label = "Total Belanja", value = formatCurrency.format(total), isBold = true)
     }
 }
 
 @Composable
-fun SummaryRow(
-    label: String,
-    value: String,
-    isBold: Boolean = false
+private fun SummaryRow(label: String, value: String, isBold: Boolean = false) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+        Text(text = label, color = if (isBold) Color.Black else Color.Gray)
+        Text(text = value, fontWeight = if (isBold) FontWeight.Bold else FontWeight.Normal)
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ManualAddressDialog(
+    onDismissRequest: () -> Unit,
+    onAddressConfirmed: (String) -> Unit,
+    initialAddress: String
 ) {
-    Row(
-        Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(
-            text = label,
-            color = Color.Gray,
-            fontSize = 14.sp,
-            fontWeight = if (isBold) FontWeight.Bold else FontWeight.Normal
-        )
-        Text(
-            text = value,
-            color = Color.Black,
-            fontSize = 14.sp,
-            fontWeight = if (isBold) FontWeight.ExtraBold else FontWeight.SemiBold
-        )
-    }
-    Spacer(Modifier.height(8.dp))
-}
+    var newAddress by remember { mutableStateOf(initialAddress) }
 
-@Composable
-fun AddressSection() { /* Placeholder UI */
-    Column(Modifier.padding(16.dp)) {
-        Text("Alamat Pengiriman", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        Text("Jalan Raya Kuta No. 123, Bali", style = MaterialTheme.typography.bodyMedium)
-        Text("Ubah", color = MaterialTheme.colorScheme.primary, modifier = Modifier.clickable { })
-        HorizontalDivider(modifier = Modifier.padding(top = 16.dp))
-    }
-}
-
-@Composable
-fun DeliverySection() { /* Placeholder UI */
-    Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-        Text("Metode Pengiriman", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        Text("Reguler (2-3 Hari)", style = MaterialTheme.typography.bodyMedium)
-        Text("Ubah", color = MaterialTheme.colorScheme.primary, modifier = Modifier.clickable { })
-        HorizontalDivider(modifier = Modifier.padding(top = 16.dp))
-    }
-}
-
-
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-fun CheckoutScreenPreview() {
-    TugasAkhirProgmobTheme {
-        CheckoutScreen(navController = rememberNavController())
-    }
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        title = { Text("Masukkan Alamat Pengiriman") },
+        text = {
+            OutlinedTextField(
+                value = newAddress,
+                onValueChange = { newAddress = it },
+                label = { Text("Alamat Lengkap") },
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
+        confirmButton = {
+            Button(onClick = { onAddressConfirmed(newAddress) }) {
+                Text("Gunakan Alamat Ini")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismissRequest) {
+                Text("Batal")
+            }
+        }
+    )
 }

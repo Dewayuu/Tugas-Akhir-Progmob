@@ -130,6 +130,37 @@ fun MainApp() {
                 profileViewModel = profileViewModel
             )
         }
+
+        composable(
+            "invoice/{orderId}",
+            arguments = listOf(navArgument("orderId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            InvoiceScreen(
+                navController = navController,
+                orderId = backStackEntry.arguments?.getString("orderId") ?: ""
+            )
+        }
+
+        composable(
+            "tracking/{orderId}", // Terima orderId
+            arguments = listOf(navArgument("orderId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            TrackingScreen(
+                navController = navController,
+                orderId = backStackEntry.arguments?.getString("orderId") ?: ""
+            )
+        }
+
+        composable(
+            "order_detail/{orderId}",
+            arguments = listOf(navArgument("orderId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            OrderDetailScreen(
+                navController = navController,
+                orderId = backStackEntry.arguments?.getString("orderId") ?: ""
+            )
+        }
+
         composable("checkout") {
             CheckoutScreen(navController = navController)
         }

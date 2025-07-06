@@ -54,10 +54,8 @@ class ProfileViewModel : ViewModel() {
     private val _paymentSuccess = MutableStateFlow(false)
     val paymentSuccess: StateFlow<Boolean> = _paymentSuccess
 
-    // --- STATE BARU UNTUK MENYIMPAN DETAIL SATU ORDER ---
     private val _selectedOrder = MutableStateFlow<Order?>(null)
     val selectedOrder: StateFlow<Order?> = _selectedOrder
-    // ----------------------------------------------------
 
     fun fetchUserProfile() {
         val userId = auth.currentUser?.uid ?: return
@@ -96,7 +94,6 @@ class ProfileViewModel : ViewModel() {
         }
     }
 
-    // --- FUNGSI BARU UNTUK MENGAMBIL SATU ORDER ---
     fun fetchOrderById(orderId: String) {
         if (orderId.isBlank()) {
             _selectedOrder.value = null
@@ -111,18 +108,54 @@ class ProfileViewModel : ViewModel() {
             }
         }
     }
-    // ---------------------------------------------
 
     fun processSimulatedPayment(orderId: String) {
+        // Ambil nama pengguna yang sedang login
+        val currentUserName = auth.currentUser?.displayName ?: "Pengguna"
+
         viewModelScope.launch {
-            delay(3000L) // Jeda 3 detik untuk simulasi
+            delay(3000L) // Jeda 3 detik
             try {
                 db.collection("orders").document(orderId)
-                    .update("status", "Lunas")
+                    .update(
+                        "status", "Lunas",
+                        "statusPengiriman", "Pesanan Diproses",
+                        "receiverName", currentUserName // <-- SIMPAN NAMA PENGGUNA
+                    )
                     .await()
                 _paymentSuccess.value = true
             } catch (e: Exception) {
                 Log.e("ProfileViewModel", "Error processing payment", e)
+            }
+        }
+    }
+
+    fun simulateNextShipmentStep(currentOrder: Order) {
+        val currentStatus = currentOrder.statusPengiriman
+        val nextStatus: String
+        var newResi: String? = currentOrder.nomorResi
+
+        when (currentStatus) {
+            "Pesanan Diproses" -> nextStatus = "Pesanan Dikemas"
+            "Pesanan Dikemas" -> {
+                nextStatus = "Pesanan Dikirim"
+                newResi = "EDGE-${(10000000..99999999).random()}" // Buat resi palsu
+            }
+            "Pesanan Dikirim" -> nextStatus = "Pesanan Tiba"
+            else -> return
+        }
+
+        viewModelScope.launch {
+            try {
+                db.collection("orders").document(currentOrder.orderId)
+                    .update(
+                        "statusPengiriman", nextStatus,
+                        "nomorResi", newResi
+                    )
+                    .await()
+                fetchOrderById(currentOrder.orderId)
+            } catch (e: Exception) {
+                Log.e("ProfileViewModel", "Error simulating next step", e)
             }
         }
     }

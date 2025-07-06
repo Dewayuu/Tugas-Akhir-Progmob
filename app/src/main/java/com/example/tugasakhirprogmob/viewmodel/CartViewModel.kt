@@ -29,9 +29,15 @@ data class Order(
     val userId: String = "",
     val items: List<CartItem> = emptyList(),
     val totalPrice: Double = 0.0,
-    val status: String = "Pending",
+    var status: String = "Pending",
     @ServerTimestamp
-    val createdAt: Date? = null
+    val createdAt: Date? = null,
+    val receiverName: String? = null,
+
+    val alamatPengiriman: String = "Jalan Raya Kuta No. 123, Badung, Bali", // Placeholder
+    var statusPengiriman: String = "Menunggu Pembayaran",
+    var nomorResi: String? = null
+
 )
 
 class CartViewModel : ViewModel() {

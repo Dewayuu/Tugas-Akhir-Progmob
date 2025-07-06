@@ -80,15 +80,14 @@ fun OrderHistoryScreen(
                         .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Di dalam LazyColumn di OrderHistoryScreen.kt
+
                     items(orders, key = { it.orderId }) { order ->
-                        OrderItemCard(
-                            order = order,
-                            onPayClick = {
-                                // PASTIKAN INI MENGARAH KE "payment_method"
+                        Box(modifier = Modifier.clickable { navController.navigate("order_detail/${order.orderId}") }) {
+                            OrderItemCard(order = order) {
+                                // onPayClick sekarang mengarah ke alur pembayaran Ide 1
                                 navController.navigate("payment_method/${order.orderId}")
                             }
-                        )
+                        }
                     }
 
                     // --------------------------

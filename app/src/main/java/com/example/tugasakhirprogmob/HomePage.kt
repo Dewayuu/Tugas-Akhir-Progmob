@@ -85,7 +85,8 @@ fun MainApp() {
             ProductCreateScreen(
                 navController = navController,
                 onBackClick = { navController.popBackStack() },
-                productViewModel = productViewModel
+                productViewModel = productViewModel,
+                productId = null
             )
         }
         composable(Screen.SearchScreen.route) {
@@ -217,6 +218,19 @@ fun MainApp() {
             } else {
                 navController.popBackStack()
             }
+        }
+        //  EDIT PRODUK
+        composable(
+            route = "add_product_edit/{productId}",
+            arguments = listOf(navArgument("productId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val productId = backStackEntry.arguments?.getString("productId")
+            ProductCreateScreen(
+                navController = navController,
+                onBackClick = { navController.popBackStack() },
+                productViewModel = productViewModel,
+                productId = productId // Teruskan product ID ke ProductCreateScreen
+            )
         }
     }
 }

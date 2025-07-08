@@ -168,17 +168,19 @@ class ProductViewModel : ViewModel() {
         }
     }
 
-    fun addProduct(
+    fun addOrUpdateProduct(
         context: Context,
+        productId: String?,
         name: String,
         priceStr: String,
         brand: String,
         category: String,
         description: String,
-        imageUris: List<Uri> // Diubah menjadi list
+        imageUris: List<Uri>, // Diubah menjadi list
+        existingImageUrls: List<String> = emptyList()
     ) {
-        if (name.isBlank() || priceStr.isBlank() || imageUris.isEmpty()) {
-            Log.e("ProductViewModel", "Validation failed: Missing fields.")
+        if (name.isBlank() || priceStr.isBlank() || (imageUris.isEmpty() && existingImageUrls.isEmpty())) {
+            Log.e("ProductViewModel", "Validation failed: Missing fields or images.")
             return
         }
 
@@ -197,8 +199,8 @@ class ProductViewModel : ViewModel() {
                 // Inisialisasi Cloudinary (aman untuk dipanggil berulang kali)
                 CloudinaryManager.init(context.applicationContext)
 
-                // Unggah semua gambar secara bersamaan dan kumpulkan URL-nya
-                val uploadedImageUrls = coroutineScope {
+                // Unggah semua gambar baru secara bersamaan dan kumpulkan URL-nya
+                val newUploadedImageUrls = coroutineScope {
                     imageUris.map { uri ->
                         async(Dispatchers.IO) {
                             val compressedData = compressImage(context, uri)
@@ -208,29 +210,46 @@ class ProductViewModel : ViewModel() {
                 }
 
                 // Cek jika ada unggahan yang gagal
-                if (uploadedImageUrls.any { it.isEmpty() }) {
-                    throw Exception("One or more image uploads failed.")
+                if (newUploadedImageUrls.any { it.isEmpty() }) {
+                    throw Exception("One or more new image uploads failed.")
                 }
 
-                val newProduct = ProductRequest(
-                    name = name,
-                    price = priceStr.toDoubleOrNull() ?: 0.0,
-                    brand = brand,
-                    category = category,
-                    description = description,
-                    imageUrls = uploadedImageUrls, // Simpan list URL
-                    sellerId = currentUser.uid,
-                    sellerName = currentUser.displayName.orEmpty()
-                )
+                // Gabungkan gambar yang sudah ada dengan gambar yang baru diunggah
+                val finalImageUrls = existingImageUrls + newUploadedImageUrls.filter { it.isNotEmpty() }
 
-                db.collection("products").add(newProduct).await()
+                if (productId == null) {
+                    // ADD NEW PRODUCT
+                    val newProduct = ProductRequest(
+                        name = name,
+                        price = priceStr.toDoubleOrNull() ?: 0.0,
+                        brand = brand,
+                        category = category,
+                        description = description,
+                        imageUrls = finalImageUrls, // Simpan list URL
+                        sellerId = currentUser.uid,
+                        sellerName = currentUser.displayName.orEmpty()
+                    )
+                    db.collection("products").add(newProduct).await()
+                    Log.d("ProductViewModel", "Product added successfully to Firestore.")
+                } else {
+                    // EXISTING PRODUCT
+                    val updates = mutableMapOf<String, Any>(
+                        "name" to name,
+                        "price" to (priceStr.toDoubleOrNull() ?: 0.0),
+                        "brand" to brand,
+                        "category" to category,
+                        "description" to description,
+                        "imageUrls" to finalImageUrls
+                    )
+                    db.collection("products").document(productId).update(updates).await()
+                    Log.d("ProductViewModel", "Product $productId updated successfully in Firestore.")
+                }
 
-                Log.d("ProductViewModel", "Product added successfully to Firestore.")
                 _isSuccess.value = true
                 // Setelah berhasil tambah, ambil ulang daftar produk user
 //                fetchUserProducts()
             } catch (e: Exception) {
-                Log.e("ProductViewModel", "Error adding product", e)
+                Log.e("ProductViewModel", "Error adding/updating product", e)
             } finally {
                 _isLoading.value = false
             }

@@ -37,14 +37,17 @@ import coil.compose.AsyncImage
 import com.example.tugasakhirprogmob.ui.components.BottomNavBar
 import com.example.tugasakhirprogmob.ui.theme.TugasAkhirProgmobTheme
 import com.example.tugasakhirprogmob.viewmodel.ProductViewModel
+import com.example.tugasakhirprogmob.viewmodel.ProductDetailViewModel
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProductCreateScreen(
     navController: NavController,
     onBackClick: () -> Unit,
-    productViewModel: ProductViewModel
-//    productViewModel: ProductViewModel = viewModel() // Mengambil instance dari ViewModel
+    productViewModel: ProductViewModel,
+    productDetailViewModel: ProductDetailViewModel = viewModel(),
+    productId: String? = null
 ) {
     val context = LocalContext.current
 
@@ -55,9 +58,12 @@ fun ProductCreateScreen(
     var description by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf("Category") }
     var imageUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
+    var existingImageUrls by remember { mutableStateOf<List<String>>(emptyList()) }
+
     // Mengamati state dari ViewModel
     val isLoading by productViewModel.isLoading.collectAsState()
     val isSuccess by productViewModel.isSuccess.collectAsState()
+    val productToEdit by productDetailViewModel.product.collectAsState()
 
     // Launcher untuk memilih gambar dari galeri
     val imagePickerLauncher = rememberLauncherForActivityResult(
@@ -65,6 +71,36 @@ fun ProductCreateScreen(
     ) { uris: List<Uri> ->
         // Tambahkan gambar yang baru dipilih ke dalam list yang sudah ada
         imageUris = imageUris + uris
+    }
+
+    // Efek ini akan berjalan ketika `productId` berubah (untuk mode edit)
+    LaunchedEffect(productId) {
+        if (productId != null) {
+            productDetailViewModel.fetchProductById(productId)
+        } else {
+            // Reset fields if navigating to add new product
+            productName = ""
+            askingPrice = ""
+            brand = ""
+            description = ""
+            selectedCategory = "Category"
+            imageUris = emptyList()
+            existingImageUrls = emptyList()
+        }
+    }
+
+    // Efek ini akan berjalan ketika `productToEdit` berhasil dimuat
+    LaunchedEffect(productToEdit) {
+        productToEdit?.let { product ->
+            productName = product.name
+            askingPrice = product.price.toString()
+            brand = product.brand
+            description = product.description
+            selectedCategory = product.category
+            // Handle existing image URLs (convert them if necessary or just store them)
+            existingImageUrls = product.imageUrls.ifEmpty { listOfNotNull(product.imageUrl) }
+            imageUris = emptyList() // Clear new image Uris when loading existing product
+        }
     }
 
     // Efek ini akan berjalan ketika `isSuccess` menjadi true
@@ -79,7 +115,7 @@ fun ProductCreateScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(text="Add Product", fontWeight = FontWeight.SemiBold) },
+                title = { Text(text = if (productId == null) "Add Product" else "Edit Product", fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(
@@ -114,8 +150,10 @@ fun ProductCreateScreen(
                     item { Spacer(modifier = Modifier.height(8.dp)) }
 
                     item {
+                        // Gabungkan gambar yang sudah ada dan yang baru diunggah untuk ditampilkan
+                        val allImagesToDisplay = existingImageUrls + imageUris.map { it.toString() }
                         MultiImageUploader(
-                            imageUris = imageUris,
+                            imageUris = allImagesToDisplay.map { Uri.parse(it) }, // Convert strings back to Uri for display
                             onAddClick = { imagePickerLauncher.launch("image/*") }
                         )
                     }
@@ -147,15 +185,17 @@ fun ProductCreateScreen(
 
                 Button(
                     onClick = {
-                        // Memanggil fungsi ViewModel untuk menambah produk
-                        productViewModel.addProduct(
+                        // Memanggil fungsi ViewModel untuk menambah/mengedit produk
+                        productViewModel.addOrUpdateProduct(
                             context = context,
+                            productId = productId,
                             name = productName,
                             priceStr = askingPrice,
                             brand = brand,
                             category = selectedCategory,
                             description = description,
-                            imageUris = imageUris
+                            imageUris = imageUris,
+                            existingImageUrls = existingImageUrls
                         )
                     },
                     modifier = Modifier.fillMaxWidth().padding(16.dp).height(56.dp),
@@ -326,10 +366,13 @@ fun ProductCreateScreenPreview() {
     TugasAkhirProgmobTheme {
         val dummyNavController = rememberNavController()
         val fakeProductViewModel = ProductViewModel()
+        val fakeProductDetailViewModel = ProductDetailViewModel()
         ProductCreateScreen(
             navController = dummyNavController,
             onBackClick = {},
-            productViewModel = fakeProductViewModel
+            productViewModel = fakeProductViewModel,
+            productDetailViewModel = fakeProductDetailViewModel,
+            productId = null
         )
     }
 }

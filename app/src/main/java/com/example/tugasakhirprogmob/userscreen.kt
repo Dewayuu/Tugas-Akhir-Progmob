@@ -131,7 +131,7 @@ fun UserProfileScreen(
                 BottomNavBar(navController = navController)
             }
         },
-        containerColor = Color(0xFFEFF3F6)
+        containerColor = Color.White
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -239,7 +239,7 @@ fun DefaultUserProfileContent(
                         .fillMaxWidth()
                         .padding(horizontal = 12.dp),
                     shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFD8D8D8)),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFFFF)),
                     elevation = CardDefaults.cardElevation(0.dp)
                 ) {
                     Row(
@@ -267,8 +267,15 @@ fun DefaultUserProfileContent(
                         Spacer(modifier = Modifier.width(12.dp))
 
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(userProfile?.name ?: "Loading...", style = MaterialTheme.typography.titleMedium)
-                            Text(userProfile?.address ?: "", style = MaterialTheme.typography.bodySmall, color = Color.DarkGray)
+                            Text(userProfile?.name ?: "Loading...",
+                                style = MaterialTheme.typography.titleMedium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis)
+                            Text(userProfile?.address ?: "",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.DarkGray,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis)
                         }
 
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -306,7 +313,7 @@ fun DefaultUserProfileContent(
                                 Box(
                                     modifier = Modifier
                                         .size(36.dp)
-                                        .background(Color(0xFFB0B0B0), shape = RoundedCornerShape(8.dp))
+                                        .background(Color(0xFFF0F0F0), shape = RoundedCornerShape(8.dp))
                                         .clickable {
                                             when (desc) {
                                                 "Edit" -> {
@@ -338,7 +345,7 @@ fun DefaultUserProfileContent(
                         .fillMaxWidth()
                         .padding(horizontal = 12.dp),
                     shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFD8D8D8)),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFFFF)),
                     elevation = CardDefaults.cardElevation(0.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
@@ -384,8 +391,8 @@ fun DefaultUserProfileContent(
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp, vertical = 16.dp),
             shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFFD8D8D8)),
-            elevation = CardDefaults.cardElevation(0.dp)
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFFFF)),
+            elevation = CardDefaults.cardElevation(1.dp)
         ) {
             Column(
                 modifier = Modifier.padding(16.dp)
@@ -405,7 +412,7 @@ fun DefaultUserProfileContent(
                             onClick = {
                                 navController.navigate("productDetail/${product.id}")
                             },
-                            onEditClick = { /* TODO */ },
+                            onEditClick = { navController.navigate("add_product_edit/${product.id}") },
                             onDeleteClick = {
                                 productToDelete = product
                                 showDeleteDialog = true

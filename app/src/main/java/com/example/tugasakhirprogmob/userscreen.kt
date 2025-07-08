@@ -49,6 +49,13 @@ import com.example.tugasakhirprogmob.viewmodel.ProfileViewModel
 import com.example.tugasakhirprogmob.viewmodel.UserProfile
 import java.text.NumberFormat
 import java.util.Locale
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.rememberCoroutineScope
+import android.content.Context
+import android.content.Intent
+import kotlinx.coroutines.launch
 
 
 // Nama fungsi diubah dan sekarang menerima NavController
@@ -206,6 +213,9 @@ fun DefaultUserProfileContent(
     productViewModel: ProductViewModel,
     userProfile: UserProfile?
 ) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+
     var showDeleteDialog by remember { mutableStateOf(false) }
     var productToDelete by remember { mutableStateOf<Product?>(null) }
 
@@ -320,8 +330,12 @@ fun DefaultUserProfileContent(
                                                     navController.navigate(Screen.EditProfile.route)
                                                 }
                                                 "Logout" -> {
-                                                    // TODO: Tambahkan logika logout
+                                                    coroutineScope.launch {
+                                                        performLogout(context)
+                                                    }
                                                 }
+
+
                                             }
                                         },
                                     contentAlignment = Alignment.Center
@@ -572,5 +586,14 @@ fun UserProfileScreenPreview() {
             searchViewModel = fakeSearchViewModel,
             profileViewModel = fakeProfileViewModel
         )
+    }
+}
+fun performLogout(context: Context) {
+    val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN).build()
+    val googleSignInClient = GoogleSignIn.getClient(context, gso)
+    googleSignInClient.signOut().addOnCompleteListener {
+        val intent = Intent(context, Register::class.java)
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        context.startActivity(intent)
     }
 }

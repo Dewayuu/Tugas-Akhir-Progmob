@@ -39,6 +39,7 @@ import com.example.tugasakhirprogmob.ui.components.BottomNavBar
 import com.example.tugasakhirprogmob.ui.theme.TugasAkhirProgmobTheme
 import com.example.tugasakhirprogmob.viewmodel.ProductViewModel
 import com.example.tugasakhirprogmob.viewmodel.ProductDetailViewModel
+import com.example.tugasakhirprogmob.AppConstants
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -308,7 +309,8 @@ fun CategoryDropdown(
     selectedCategory: String,
     onCategorySelected: (String) -> Unit
 ) {
-    val categories = listOf("Electronics", "Fashion", "Home & Kitchen", "Books", "Other")
+    // Gunakan daftar kategori dari AppConstants
+    val categories = remember { AppConstants.PRODUCT_CATEGORIES }
     var expanded by remember { mutableStateOf(false) }
 
     Column(
@@ -343,6 +345,7 @@ fun CategoryDropdown(
                 expanded = expanded,
                 onDismissRequest = { expanded = false }
             ) {
+                // Iterasi melalui daftar kategori dari AppConstants
                 categories.forEach { category ->
                     DropdownMenuItem(
                         text = { Text(text = category) },
@@ -356,6 +359,7 @@ fun CategoryDropdown(
         }
     }
 }
+
 
 @SuppressLint("ViewModelConstructorInComposable")
 @Preview(showBackground = true, showSystemUi = true)

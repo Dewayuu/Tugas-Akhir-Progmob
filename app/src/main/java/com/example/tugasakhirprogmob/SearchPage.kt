@@ -35,6 +35,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 
 
@@ -124,29 +125,72 @@ fun ProductGrid(products: List<Product>, navController: NavController, modifier:
 @Composable
 fun HomePageProductCard(product: Product, navController: NavController) {
     val formatCurrency = remember { NumberFormat.getCurrencyInstance(Locale("in", "ID")) }
+    val isSoldOut = product.stock <= 0
 
-    Column(modifier = Modifier.clickable {
-        navController.navigate("productDetail/${product.id}")
-    }) {
+    Column(modifier = Modifier.clickable(
+        enabled = !isSoldOut, // Nonaktifkan klik jika sold out
+        onClick = { navController.navigate("productDetail/${product.id}") }
+    )) {
         val displayImage = if (product.imageUrls.isNotEmpty()) {
             product.imageUrls.first()
         } else {
             product.imageUrl
         }
-        AsyncImage(
-            model = displayImage,
-            contentDescription = product.name,
-            contentScale = ContentScale.Crop,
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(1f)
                 .clip(RoundedCornerShape(12.dp))
                 .background(Color.LightGray)
-        )
+        ) {
+            AsyncImage(
+                model = displayImage,
+                contentDescription = product.name,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+
+            if (isSoldOut) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.5f)), // Overlay semi-transparan
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "SOLD OUT",
+                        color = Color.White,
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+
         Spacer(modifier = Modifier.height(8.dp))
-        Text(product.brand, style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-        Text(product.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
-        Text(formatCurrency.format(product.price), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+        val textColor = if (isSoldOut) Color.Gray.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurface // Warna teks abu-abu jika sold out
+
+        Text(product.brand, style = MaterialTheme.typography.labelSmall, color = Color.Gray, maxLines = 1)
+        Text(
+            text = product.name,
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            color = textColor
+        )
+        Text(
+            text = formatCurrency.format(product.price),
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Bold,
+            color = textColor
+        )
+        if (!isSoldOut) {
+            Text(
+                text = "Sisa stok: ${product.stock}",
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.Gray
+            )
+        }
     }
 }
 

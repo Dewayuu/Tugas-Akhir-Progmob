@@ -81,10 +81,11 @@ fun UserProfileScreen(
     var isSearchBarFocused by remember { mutableStateOf(false) }
     var searchExecuted by remember { mutableStateOf(false) }
 
-    val displayedProducts = if (searchExecuted) {
-        realProducts.filter {
-            it.name.contains(searchQuery, ignoreCase = true) ||
-                    it.brand.contains(searchQuery, ignoreCase = true)
+    val displayedProducts = if (searchExecuted && searchQuery.isNotBlank()) {
+        realProducts.filter { product ->
+            product.name.contains(searchQuery, ignoreCase = true) ||
+                    product.brand.contains(searchQuery, ignoreCase = true) ||
+                    product.category.contains(searchQuery, ignoreCase = true)
         }
     } else {
         realProducts
@@ -476,24 +477,49 @@ fun UserProductCard(
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
     val formatCurrency = remember { NumberFormat.getCurrencyInstance(Locale("in", "ID")) }
+    val isSoldOut = product.stock <= 0 // Cek apakah produk sold out
 
     Card(
-        modifier = Modifier.clickable(onClick = onClick),
+        modifier = Modifier.clickable(
+            enabled = !isSoldOut, // Nonaktifkan klik jika sold out
+            onClick = onClick
+        ),
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(2.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
         Column {
-            AsyncImage(
-                model = product.imageUrls.firstOrNull() ?: product.imageUrl, // Handle both new and old data model
-                contentDescription = product.name,
-                contentScale = ContentScale.Crop,
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(1f)
                     .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
                     .background(Color.LightGray)
-            )
+            ) {
+                AsyncImage(
+                    model = product.imageUrls.firstOrNull() ?: product.imageUrl, // Handle both new and old data model
+                    contentDescription = product.name,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+
+                if (isSoldOut) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.5f)), // Overlay semi-transparan
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "SOLD OUT",
+                            color = Color.White,
+                            fontSize = 22.sp, // Ukuran font besar
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+
 
             Column(
                 modifier = Modifier
@@ -540,11 +566,12 @@ fun UserProductCard(
                     overflow = TextOverflow.Ellipsis
                 )
                 Spacer(modifier = Modifier.height(4.dp))
+                val textColor = if (isSoldOut) Color.Gray.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurface // Warna teks abu-abu jika sold out
                 Text(
                     text = formatCurrency.format(product.price),
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
+                    color = textColor
                 )
             }
         }

@@ -26,6 +26,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -69,8 +70,11 @@ import com.example.tugasakhirprogmob.viewmodel.Product
 import com.example.tugasakhirprogmob.viewmodel.ProductViewModel
 import com.example.tugasakhirprogmob.viewmodel.ProfileViewModel
 import com.example.tugasakhirprogmob.viewmodel.SearchViewModel
+import com.example.tugasakhirprogmob.AppConstants
 import java.text.NumberFormat
 import java.util.Locale
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.TopAppBarDefaults
 
 @Composable
 fun MainApp() {
@@ -251,6 +255,21 @@ fun MainApp() {
                 )
             }
         }
+        composable(
+            route = Screen.CategoryProducts.route,
+            arguments = listOf(navArgument("categoryName") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val categoryName = backStackEntry.arguments?.getString("categoryName")
+            if (categoryName != null) {
+                CategoryProductScreen(
+                    navController = navController,
+                    categoryName = categoryName,
+                    productViewModel = productViewModel
+                )
+            } else {
+                navController.popBackStack() // Kembali jika nama kategori tidak ada
+            }
+        }
     }
 }
 
@@ -272,15 +291,34 @@ fun HomeScreen(
     var searchQuery by remember { mutableStateOf("") }
     var isSearchBarFocused by remember { mutableStateOf(false) }
     var searchExecuted by remember { mutableStateOf(false) }
+    var selectedCategoryFilter by remember { mutableStateOf<String?>(null) } // Null berarti "All"
 
-    val displayedProducts = if (searchExecuted) {
-        realProducts.filter {
-            it.name.contains(searchQuery, ignoreCase = true) ||
-                    it.brand.contains(searchQuery, ignoreCase = true)
+    // LOGIKA PEMFILTERAN
+    val displayedProducts = remember(realProducts, searchQuery, searchExecuted, selectedCategoryFilter) {
+        val filteredBySearch = if (searchExecuted && searchQuery.isNotBlank()) {
+            realProducts.filter {
+                it.name.contains(searchQuery, ignoreCase = true) ||
+                        it.brand.contains(searchQuery, ignoreCase = true) ||
+                        it.category.contains(searchQuery, ignoreCase = true) // Penting agar kategori juga dicari
+            }
+        } else {
+            realProducts
         }
-    } else {
-        realProducts
+
+        if (selectedCategoryFilter != null && selectedCategoryFilter != "All") {
+            filteredBySearch.filter { it.category.equals(selectedCategoryFilter, ignoreCase = true) }
+        } else {
+            filteredBySearch
+        }
     }
+//    val displayedProducts = if (searchExecuted) {
+//        realProducts.filter {
+//            it.name.contains(searchQuery, ignoreCase = true) ||
+//                    it.brand.contains(searchQuery, ignoreCase = true)
+//        }
+//    } else {
+//        realProducts
+//    }
 
     fun performSearch(query: String) {
         val trimmedQuery = query.trim()
@@ -292,6 +330,7 @@ fun HomeScreen(
         searchQuery = trimmedQuery
         searchExecuted = trimmedQuery.isNotBlank()
         isSearchBarFocused = false
+        selectedCategoryFilter = null // Reset category filter on search
     }
 
     Scaffold(
@@ -353,7 +392,16 @@ fun HomeScreen(
                 DefaultHomeScreenContent(
                     products = displayedProducts,
                     navController = navController,
-                    mostViewedProduct = mostViewedProduct
+                    mostViewedProduct = mostViewedProduct,
+                    selectedCategoryFilter = selectedCategoryFilter,
+                    onCategorySelected = { category ->
+                        selectedCategoryFilter = category
+                        // Reset search-related states when category is selected
+                        searchQuery = ""
+                        searchExecuted = false
+                        searchViewModel.resetSearchState(realProducts)
+                        navController.navigate(Screen.CategoryProducts.createRoute(category))
+                    }
                 )
             }
         }
@@ -361,13 +409,24 @@ fun HomeScreen(
 }
 
 @Composable
-fun DefaultHomeScreenContent(products: List<Product>, navController: NavController, mostViewedProduct: Product?) {
+fun DefaultHomeScreenContent(
+    products: List<Product>,
+    navController: NavController,
+    mostViewedProduct: Product?,
+    selectedCategoryFilter: String?,
+    onCategorySelected: (String) -> Unit)
+{
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 8.dp)
     ) {
         item {  FeaturedProductBanner(product = mostViewedProduct, navController = navController) }
-        item { CategoryRow() }
+        item {
+            CategoryRow(
+                selectedCategory = selectedCategoryFilter,
+                onCategorySelected = onCategorySelected
+            )
+        }
         item {
             Row(
                 Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
@@ -614,33 +673,92 @@ fun TopSellingBanner() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CategoryRow() {
+fun CategoryRow(selectedCategory: String?, onCategorySelected: (String) -> Unit) {
+    // Gunakan daftar kategori dari AppConstants
+    val categories = remember { AppConstants.PRODUCT_CATEGORIES }
+
+    // Map kategori ke ikon placeholder. Anda perlu mengganti ini dengan ikon yang sebenarnya.
+    val categoryIcons = remember {
+        mapOf(
+            "T-shirt" to R.drawable.t_shirt,
+            "Trousers" to R.drawable.trousers,
+            "Jacket" to R.drawable.jacket,
+            "Footwear" to R.drawable.footwear,
+            "Shirt" to R.drawable.shirt,
+            "Dresses" to R.drawable.dress,
+            "Sweaters" to R.drawable.sweater,
+            "Shorts" to R.drawable.shorts,
+            "Cardigans" to R.drawable.cardigan,
+            "Hats" to R.drawable.hats,
+            "Other" to R.drawable.others
+        )
+    }
+
     Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
         Row(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text("Categories", fontWeight = FontWeight.Bold)
+            // Anda bisa tambahkan logika navigasi ke layar semua kategori di sini jika diperlukan
             Text(">", modifier = Modifier.align(Alignment.CenterVertically).clickable {})
         }
         Spacer(modifier = Modifier.height(8.dp))
         LazyRow {
-            items(5) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.padding(end = 16.dp).width(75.dp)
-                ) {
-                    Box(
-                        modifier = Modifier.size(64.dp).background(Color(0xFFEFEFEF), shape = RoundedCornerShape(12.dp)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        // Icon bisa ditambahkan di sini
-                    }
-                    Text("Category $it")
-                }
+            // Tampilkan setiap kategori sebagai CategoryGridItem
+            items(categories) { category ->
+                CategoryGridItem(
+                    text = category,
+                    isSelected = selectedCategory == category,
+                    onClick = { onCategorySelected(category) },
+                    iconResId = categoryIcons[category] ?: R.drawable.logo // Ambil ikon spesifik atau default logo
+                )
+                Spacer(modifier = Modifier.width(8.dp))
             }
         }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CategoryGridItem(
+    text: String,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    iconResId: Int // Parameter untuk ID resource ikon
+) {
+    Column(
+        modifier = Modifier
+            .clickable(onClick = onClick)
+            .width(80.dp) // Lebar tetap untuk setiap item
+            .padding(vertical = 4.dp), // Padding vertikal di sekitar item
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .size(64.dp) // Ukuran kotak latar belakang ikon
+                .clip(RoundedCornerShape(12.dp))
+                .background(if (isSelected) MaterialTheme.colorScheme.primary else Color.LightGray), // Warna latar belakang berdasarkan seleksi
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                painter = painterResource(id = iconResId), // Gunakan ID resource ikon yang diteruskan
+                contentDescription = text,
+                modifier = Modifier.size(36.dp), // Ukuran ikon itu sendiri
+                tint = if (isSelected) Color.White else Color.DarkGray // Warna ikon berdasarkan seleksi
+            )
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall, // Font kecil untuk nama kategori
+            color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Black, // Warna teks berdasarkan seleksi
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 
@@ -688,6 +806,80 @@ fun SellerProfileScreen(
         } else {
             Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CategoryProductScreen(
+    navController: NavController,
+    categoryName: String,
+    productViewModel: ProductViewModel = viewModel()
+) {
+    val allProducts by productViewModel.products.collectAsStateWithLifecycle()
+    val isLoading by productViewModel.isLoading.collectAsStateWithLifecycle()
+
+    // Filter produk berdasarkan categoryName
+    val filteredProducts = remember(allProducts, categoryName) {
+        if (categoryName == "All") { // Jika "All" dikirim, tampilkan semua produk
+            allProducts
+        } else {
+            allProducts.filter { it.category.equals(categoryName, ignoreCase = true) }
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(text = categoryName, fontWeight = FontWeight.SemiBold) },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) { // Tombol kembali
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back to Home"
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFFF5F5F5))
+            )
+        },
+        containerColor = Color.White
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
+            if (isLoading && filteredProducts.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            } else if (filteredProducts.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("No products found in this category.", color = Color.Gray)
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
+                ) {
+                    items(filteredProducts.chunked(2)) { productRow ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            productRow.forEach { product ->
+                                Box(modifier = Modifier.weight(1f)) {
+                                    ProductCard(product = product, navController = navController)
+                                }
+                            }
+                            if (productRow.size == 1) { Spacer(modifier = Modifier.weight(1f)) }
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                }
             }
         }
     }

@@ -150,7 +150,14 @@ class ProductViewModel : ViewModel() {
                         doc.toObject(Product::class.java)?.copy(id = doc.id)
                     }
                     _products.value = allProductList
-                    _mostViewedProduct.value = allProductList.maxByOrNull { it.viewCount }
+
+                    // Cari produk dengan viewCount terbanyak yang stoknya masih ada
+                    val availableProductsSortedByViews = allProductList
+                        .filter { it.stock > 0 } // Hanya produk yang masih memiliki stok
+                        .sortedByDescending { it.viewCount } // Urutkan dari viewCount tertinggi ke terendah
+
+                    _mostViewedProduct.value = availableProductsSortedByViews.firstOrNull() // Ambil yang pertama (terbanyak dilihat & stok ada)
+//                    _mostViewedProduct.value = allProductList.maxByOrNull { it.viewCount }
                 }
             }
     }

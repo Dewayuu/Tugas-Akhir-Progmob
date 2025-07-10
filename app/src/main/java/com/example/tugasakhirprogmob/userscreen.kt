@@ -171,7 +171,8 @@ fun UserProfileScreen(
                     navController = navController,
                     userProducts = userProducts,
                     productViewModel = productViewModel,
-                    userProfile = userProfile
+                    userProfile = userProfile,
+                    isMyProfile = true
                 )
             }
         }
@@ -211,7 +212,8 @@ fun DefaultUserProfileContent(
     navController: NavController,
     userProducts: List<Product>,
     productViewModel: ProductViewModel,
-    userProfile: UserProfile?
+    userProfile: UserProfile?,
+    isMyProfile: Boolean
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -318,37 +320,44 @@ fun DefaultUserProfileContent(
 
                         Spacer(modifier = Modifier.width(12.dp))
 
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            listOf(R.drawable.edit2 to "Edit", R.drawable.logout to "Logout").forEach { (iconId, desc) ->
-                                Box(
-                                    modifier = Modifier
-                                        .size(36.dp)
-                                        .background(Color(0xFFF0F0F0), shape = RoundedCornerShape(8.dp))
-                                        .clickable {
-                                            when (desc) {
-                                                "Edit" -> {
-                                                    navController.navigate(Screen.EditProfile.route)
-                                                }
-                                                "Logout" -> {
-                                                    coroutineScope.launch {
-                                                        performLogout(context)
+                        if (isMyProfile) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    listOf(R.drawable.edit2 to "Edit", R.drawable.logout to "Logout").forEach { (iconId, desc) ->
+                                        Box(
+                                            modifier = Modifier
+                                                .size(36.dp)
+                                                .background(Color(0xFFF0F0F0), shape = RoundedCornerShape(8.dp))
+                                                .clickable {
+                                                    when (desc) {
+                                                        "Edit" -> {
+                                                            navController.navigate(Screen.EditProfile.route)
+                                                        }
+                                                        "Logout" -> {
+                                                            coroutineScope.launch {
+                                                                performLogout(context)
+                                                            }
+                                                        }
+
+
                                                     }
-                                                }
-
-
-                                            }
-                                        },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        painter = painterResource(id = iconId),
-                                        contentDescription = desc,
-                                        tint = Color.Black,
-                                        modifier = Modifier.size(18.dp)
-                                    )
+                                                },
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                painter = painterResource(id = iconId),
+                                                contentDescription = desc,
+                                                tint = Color.Black,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
+
+
+
                     }
                 }
 

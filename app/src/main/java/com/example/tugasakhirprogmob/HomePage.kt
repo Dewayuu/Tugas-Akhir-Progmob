@@ -22,12 +22,19 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -62,6 +69,10 @@ import com.example.tugasakhirprogmob.viewmodel.ProfileViewModel
 import com.example.tugasakhirprogmob.viewmodel.SearchViewModel
 import java.text.NumberFormat
 import java.util.Locale
+import androidx.compose.runtime.saveable.rememberSaveable
+
+
+
 
 @Composable
 fun MainApp() {
@@ -213,7 +224,8 @@ fun MainApp() {
             if (productId != null) {
                 ProductDetailScreen(
                     productId = productId,
-                    onBackClick = { navController.popBackStack() }
+                    onBackClick = { navController.popBackStack() },
+                    navController = navController
                 )
             } else {
                 navController.popBackStack()
@@ -232,6 +244,19 @@ fun MainApp() {
                 productId = productId // Teruskan product ID ke ProductCreateScreen
             )
         }
+        composable(
+            route = "sellerProfile/{sellerId}",
+            arguments = listOf(navArgument("sellerId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val sellerId = backStackEntry.arguments?.getString("sellerId")
+            if (sellerId != null) {
+                // Panggil Composable baru untuk menampilkan profil penjual
+                SellerProfileScreen(
+                    sellerId = sellerId,
+                    navController = navController
+                )
+            }
+        }
     }
 }
 
@@ -239,7 +264,7 @@ fun MainApp() {
 @Composable
 fun HomeScreen(
     navController: NavController,
-    productViewModel: ProductViewModel,
+    productViewModel: ProductViewModel = viewModel(),
     searchViewModel: SearchViewModel
 ) {
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -506,6 +531,56 @@ fun CategoryRow() {
         }
     }
 }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SellerProfileScreen(
+    sellerId: String,
+    navController: NavController,
+    profileViewModel: ProfileViewModel = viewModel(),
+    productViewModel: ProductViewModel = viewModel()
+) {
+    val sellerProfile by profileViewModel.specificUserProfile.collectAsStateWithLifecycle()
+    val sellerProducts by productViewModel.userProducts.collectAsStateWithLifecycle()
+
+    LaunchedEffect(sellerId) {
+        profileViewModel.fetchUserProfileById(sellerId)
+        productViewModel.fetchProductsByUserId(sellerId)
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(sellerProfile?.name ?: "Seller Profile") },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                }
+            )
+        },
+        bottomBar = {
+            BottomNavBar(navController = navController)
+        }
+    ) { paddingValues ->
+        if (sellerProfile != null) {
+            Column(modifier = Modifier.padding(paddingValues)) {
+                DefaultUserProfileContent(
+                    navController = navController,
+                    userProducts = sellerProducts,
+                    productViewModel = productViewModel,
+                    userProfile = sellerProfile,
+                    isMyProfile = false // Tandai bahwa ini bukan profil pengguna sendiri
+                )
+            }
+        } else {
+            Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        }
+    }
+}
+
 
 @SuppressLint("ViewModelConstructorInComposable")
 @Preview(showBackground = true)

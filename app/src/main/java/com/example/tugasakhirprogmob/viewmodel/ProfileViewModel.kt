@@ -14,6 +14,7 @@ import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.firestore.ktx.toObject
 import com.google.firebase.ktx.Firebase
+import com.google.firebase.Timestamp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -31,7 +32,8 @@ data class UserProfile(
     val address: String? = null,
     val phoneNumber: String? = null,
     val profilePictureUrl: String? = null,
-    val bannerUrl: String? = null
+    val bannerUrl: String? = null,
+    val createdAt: Timestamp? = null
 )
 
 class ProfileViewModel : ViewModel() {
@@ -53,6 +55,12 @@ class ProfileViewModel : ViewModel() {
 
     private val _paymentSuccess = MutableStateFlow(false)
     val paymentSuccess: StateFlow<Boolean> = _paymentSuccess
+
+    private val _specificUserProfile = MutableStateFlow<UserProfile?>(null)
+    val specificUserProfile: StateFlow<UserProfile?> = _specificUserProfile
+
+    private val _userProducts = MutableStateFlow<List<Product>>(emptyList())
+    val userProducts: StateFlow<List<Product>> = _userProducts
 
     private val _selectedOrder = MutableStateFlow<Order?>(null)
     val selectedOrder: StateFlow<Order?> = _selectedOrder
@@ -233,6 +241,22 @@ class ProfileViewModel : ViewModel() {
                 .dispatch()
         }
     }
+
+    fun fetchUserProfileById(userId: String) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                val doc = db.collection("users").document(userId).get().await()
+                _specificUserProfile.value = doc.toObject<UserProfile>()
+            } catch (e: Exception) {
+                Log.e("ProfileViewModel", "Error fetching specific user profile", e)
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+
 
     fun resetUpdateStatus() {
         _updateSuccess.value = false

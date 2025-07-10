@@ -311,6 +311,26 @@ class ProductViewModel : ViewModel() {
         }
     }
 
+    fun fetchProductsByUserId(userId: String) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                val snapshot = db.collection("products")
+                    .whereEqualTo("sellerId", userId)
+                    .orderBy("postedAt", Query.Direction.DESCENDING)
+                    .get()
+                    .await()
+                _userProducts.value = snapshot.documents.mapNotNull { doc ->
+                    doc.toObject(Product::class.java)?.copy(id = doc.id)
+                }
+            } catch (e: Exception) {
+                Log.e("ProductViewModel", "Error fetching user products", e)
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
     fun resetSuccessState() {
         _isSuccess.value = false
     }

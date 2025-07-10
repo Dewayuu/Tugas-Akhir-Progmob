@@ -6,6 +6,7 @@ import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.pager.HorizontalPager
@@ -33,6 +34,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.tugasakhirprogmob.ui.theme.TugasAkhirProgmobTheme
 // --- TAMBAHKAN IMPORT INI ---
@@ -40,6 +42,7 @@ import com.example.tugasakhirprogmob.viewmodel.CartViewModel
 // -----------------------------
 import com.example.tugasakhirprogmob.viewmodel.Product
 import com.example.tugasakhirprogmob.viewmodel.ProductDetailViewModel
+import com.example.tugasakhirprogmob.viewmodel.UserProfile
 import com.google.firebase.Timestamp
 import java.text.NumberFormat
 import java.util.Locale
@@ -51,12 +54,14 @@ fun ProductDetailScreen(
     productId: String,
     onBackClick: () -> Unit,
     viewModel: ProductDetailViewModel = viewModel(),
-    cartViewModel: CartViewModel = viewModel() // Tambahkan parameter ini
+    cartViewModel: CartViewModel = viewModel(), // Tambahkan parameter ini
+    navController: NavController
 ) {
     val context = LocalContext.current // Tambahkan ini untuk Toast
     // ----------------------
     // Ambil data dari ViewModel
     val product by viewModel.product.collectAsState()
+    val sellerProfile by viewModel.sellerProfile.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
 
     // Panggil fetchProductById saat layar pertama kali dibuat
@@ -68,31 +73,31 @@ fun ProductDetailScreen(
         containerColor = Color.White
     ) { innerPadding ->
         Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-            if (isLoading) {
+            if (isLoading && product == null) {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             } else if (product != null) {
-                // Jika produk berhasil diambil, tampilkan kontennya
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                     item { ImageSliderSection(product = product!!, onBackClick = onBackClick) }
-                    // --- UBAH BAGIAN INI ---
                     item {
                         ProductTitleSection(
                             name = product!!.name,
                             price = product!!.price,
                             onAddToCart = {
                                 cartViewModel.addToCart(product!!)
-                                // Beri feedback ke pengguna
                                 Toast.makeText(context, "${product!!.name} ditambahkan", Toast.LENGTH_SHORT).show()
                             }
                         )
                     }
-                    // -----------------------
                     item { ProductMetadataSection(product = product!!) }
-                    item { SellerInfoSection(sellerName = product!!.sellerName) }
+                    item {
+                        SellerInfoSection(
+                            seller = sellerProfile,
+                            navController = navController
+                        )
+                    }
                     item { DescriptionSection(description = product!!.description) }
                 }
             } else {
-                // Tampilkan pesan jika produk tidak ditemukan
                 Text("Product not found.", modifier = Modifier.align(Alignment.Center))
             }
         }
@@ -223,22 +228,64 @@ fun ProductMetadataSection(product: Product) {
 }
 
 @Composable
-fun SellerInfoSection(sellerName: String) {
+fun SellerInfoSection(
+    seller: UserProfile?,
+    navController: NavController
+) {
+    // Tampilkan placeholder jika data seller belum tersedia
+    if (seller == null) {
+        Card(modifier = Modifier.fillMaxWidth().padding(16.dp).height(80.dp)) {
+            Box(modifier = Modifier.fillMaxSize().background(Color.LightGray.copy(alpha = 0.5f)))
+        }
+        return
+    }
+
+    // Helper untuk menghitung umur akun
+    fun formatJoinDate(timestamp: Timestamp?): String {
+        if (timestamp == null) return "N/A"
+        val diff = Timestamp.now().seconds - timestamp.seconds
+        val years = TimeUnit.SECONDS.toDays(diff) / 365
+        val months = (TimeUnit.SECONDS.toDays(diff) % 365) / 30
+        return when {
+            years > 0 -> "${years}y, ${months}mo"
+            months > 0 -> "${months}mo"
+            else -> "<1mo"
+        }
+    }
+
     Card(
-        modifier = Modifier.fillMaxWidth().padding(16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+            .clickable {
+                // Navigasi ke halaman profil penjual dengan mengirimkan ID-nya
+                navController.navigate("sellerProfile/${seller.uid}")
+            },
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5)),
     ) {
         Row(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Image(painter = painterResource(id = R.drawable.pfp1), contentDescription = "Seller Avatar", modifier = Modifier.size(50.dp).clip(CircleShape))
+            AsyncImage(
+                model = seller.profilePictureUrl,
+                contentDescription = "Seller Avatar",
+                placeholder = painterResource(id = R.drawable.profile),
+                error = painterResource(id = R.drawable.profile),
+                modifier = Modifier.size(50.dp).clip(CircleShape).background(Color.Gray),
+                contentScale = ContentScale.Crop
+            )
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = sellerName, fontWeight = FontWeight.Bold)
-                Text(text = "Location", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                Text(text = seller.name, fontWeight = FontWeight.Bold)
+                Text(text = seller.address ?: "Location not set", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+            }
+            Column(horizontalAlignment = Alignment.End) {
+                Text(text = formatJoinDate(seller.createdAt), fontWeight = FontWeight.Bold)
+                Text(text = "Joined", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
             }
         }
     }
 }
+
 
 @Composable
 fun DescriptionSection(description: String) {

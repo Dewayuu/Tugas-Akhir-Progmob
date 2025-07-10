@@ -23,28 +23,68 @@ class ProductDetailViewModel : ViewModel() {
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
+    // State profil seller
+    private val _sellerProfile = MutableStateFlow<UserProfile?>(null)
+    val sellerProfile: StateFlow<UserProfile?> = _sellerProfile
+
     // Fungsi untuk mengambil detail satu produk berdasarkan ID
+
+    // --- FUNGSI DIAMBIL ULANG DENGAN LOGIKA YANG LEBIH BAIK ---
     fun fetchProductById(productId: String) {
-        // Jangan ambil lagi jika produk sudah ada atau sedang loading
         if (_product.value?.id == productId || _isLoading.value) return
 
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val document = db.collection("products").document(productId).get().await()
-                if (document.exists()) {
-                    // Konversi dokumen Firestore ke dalam data class Product kita
-                    _product.value = document.toObject<Product>()?.copy(id = document.id)
-                    Log.d("ProductDetailVM", "Product fetched: ${_product.value?.name}")
+                // Ambil dokumen produk terlebih dahulu
+                val productDoc = db.collection("products").document(productId).get().await()
+                val productData = productDoc.toObject<Product>()?.copy(id = productDoc.id)
+
+                if (productData != null) {
+                    // Langsung set data produk agar UI bisa menampilkannya
+                    _product.value = productData
+
+                    // Kemudian, coba ambil profil penjual secara terpisah
+                    val sellerId = productData.sellerId
+                    if (sellerId.isNotBlank()) {
+                        try {
+                            val sellerDoc = db.collection("users").document(sellerId).get().await()
+                            _sellerProfile.value = sellerDoc.toObject<UserProfile>()
+                            Log.d("ProductDetailVM", "Seller fetched successfully.")
+                        } catch (e: Exception) {
+                            // Jika GAGAL mengambil seller, jangan set produk jadi null.
+                            // Biarkan produk tetap tampil.
+                            _sellerProfile.value = null
+                            Log.e("ProductDetailVM", "Failed to fetch seller profile, but product will be shown.", e)
+                        }
+                    } else {
+                        _sellerProfile.value = null
+                        Log.w("ProductDetailVM", "Product fetched but sellerId is missing.")
+                    }
                 } else {
-                    Log.w("ProductDetailVM", "Product with ID $productId not found.")
+                    // Produk benar-benar tidak ditemukan
                     _product.value = null
+                    _sellerProfile.value = null
+                    Log.w("ProductDetailVM", "Product with ID $productId not found.")
                 }
             } catch (e: Exception) {
                 Log.e("ProductDetailVM", "Error fetching product details", e)
                 _product.value = null
+                _sellerProfile.value = null
             } finally {
                 _isLoading.value = false
+            }
+        }
+    }
+    private fun fetchSellerProfile(sellerId: String) {
+        viewModelScope.launch {
+            try {
+                val sellerDoc = db.collection("users").document(sellerId).get().await()
+                _sellerProfile.value = sellerDoc.toObject<UserProfile>()
+                Log.d("ProductDetailVM", "Seller profile fetched: ${_sellerProfile.value?.name}")
+            } catch (e: Exception) {
+                Log.e("ProductDetailVM", "Error fetching seller profile", e)
+                _sellerProfile.value = null
             }
         }
     }

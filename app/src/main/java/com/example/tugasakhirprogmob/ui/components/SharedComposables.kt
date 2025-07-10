@@ -13,6 +13,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -45,7 +46,8 @@ fun TopBar(
     onQueryChange: (String) -> Unit,
     onSearch: (String) -> Unit,
     onFocusChange: (Boolean) -> Unit,
-    onCartClick: () -> Unit
+    onCartClick: () -> Unit,
+    onNotificationClick: () -> Unit // <-- Parameter baru untuk aksi klik notifikasi
 ) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -70,8 +72,19 @@ fun TopBar(
             )
         )
         Spacer(modifier = Modifier.width(8.dp))
+
+        // --- Tombol Lonceng Notifikasi ---
+        IconButton(onClick = onNotificationClick) {
+            Icon(
+                imageVector = Icons.Default.Notifications, // Menggunakan ikon bawaan yang mudah
+                contentDescription = "Notifikasi",
+                modifier = Modifier.size(28.dp)
+            )
+        }
+        // ---------------------------------
+
         IconButton(onClick = onCartClick) {
-            Icon(painter = painterResource(id = R.drawable.cart), contentDescription = "Cart", modifier = Modifier.size(28.dp))
+            Icon(painter = painterResource(id = R.drawable.cart), contentDescription = "Keranjang", modifier = Modifier.size(28.dp))
         }
     }
 }

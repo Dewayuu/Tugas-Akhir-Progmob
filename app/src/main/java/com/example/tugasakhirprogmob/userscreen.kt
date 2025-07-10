@@ -3,6 +3,8 @@
 package com.example.tugasakhirprogmob
 
 import android.annotation.SuppressLint
+import android.content.Context
+import android.content.Intent
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
@@ -14,17 +16,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
@@ -44,21 +42,16 @@ import com.example.tugasakhirprogmob.ui.components.TopBar
 import com.example.tugasakhirprogmob.ui.theme.TugasAkhirProgmobTheme
 import com.example.tugasakhirprogmob.viewmodel.Product
 import com.example.tugasakhirprogmob.viewmodel.ProductViewModel
-import com.example.tugasakhirprogmob.viewmodel.SearchViewModel
 import com.example.tugasakhirprogmob.viewmodel.ProfileViewModel
+import com.example.tugasakhirprogmob.viewmodel.SearchViewModel
 import com.example.tugasakhirprogmob.viewmodel.UserProfile
-import java.text.NumberFormat
-import java.util.Locale
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.runtime.rememberCoroutineScope
-import android.content.Context
-import android.content.Intent
 import kotlinx.coroutines.launch
+import java.text.NumberFormat
+import java.util.Locale
 
 
-// Nama fungsi diubah dan sekarang menerima NavController
 @Composable
 fun UserProfileScreen(
     navController: NavController,
@@ -70,22 +63,19 @@ fun UserProfileScreen(
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
 
-    // --- STATE DARI VIEWMODEL ---
     val userProfile by profileViewModel.userProfile.collectAsStateWithLifecycle()
     val realProducts by productViewModel.products.collectAsStateWithLifecycle()
     val userProducts by productViewModel.userProducts.collectAsStateWithLifecycle()
     val searchUiState by searchViewModel.uiState.collectAsStateWithLifecycle()
 
-    // --- LOGIKA UNTUK FITUR PENCARIAN ---
     var searchQuery by remember { mutableStateOf("") }
     var isSearchBarFocused by remember { mutableStateOf(false) }
     var searchExecuted by remember { mutableStateOf(false) }
 
-    val displayedProducts = if (searchExecuted && searchQuery.isNotBlank()) {
-        realProducts.filter { product ->
-            product.name.contains(searchQuery, ignoreCase = true) ||
-                    product.brand.contains(searchQuery, ignoreCase = true) ||
-                    product.category.contains(searchQuery, ignoreCase = true)
+    val displayedProducts = if (searchExecuted) {
+        realProducts.filter {
+            it.name.contains(searchQuery, ignoreCase = true) ||
+                    it.brand.contains(searchQuery, ignoreCase = true)
         }
     } else {
         realProducts
@@ -104,12 +94,9 @@ fun UserProfileScreen(
         searchExecuted = trimmedQuery.isNotBlank()
         isSearchBarFocused = false
     }
-    // --- AKHIR DARI LOGIKA PENCARIAN ---
 
     LaunchedEffect(Unit) {
-        profileViewModel.fetchUserProfile() // Mengambil data profil saat layar muncul
-//        productViewModel.fetchUserProducts() // Untuk listing di profil
-//        productViewModel.fetchProducts()     // Untuk fungsi pencarian
+        profileViewModel.fetchUserProfile()
     }
 
     Scaffold(
@@ -117,7 +104,6 @@ fun UserProfileScreen(
             Column (
                 modifier = Modifier.statusBarsPadding()
             ) {
-                // --- MENGGUNAKAN TopBar DARI SHARED COMPOSABLES ---
                 TopBar(
                     query = searchQuery,
                     onQueryChange = {
@@ -129,12 +115,12 @@ fun UserProfileScreen(
                     },
                     onSearch = { performSearch(it) },
                     onFocusChange = { isFocused -> isSearchBarFocused = isFocused },
-                    onCartClick = onCartClick // Meneruskan fungsi onCartClick
+                    onCartClick = onCartClick,
+                    onNotificationClick = { navController.navigate("notifications") }
                 )
             }
         },
         bottomBar = {
-            // Sembunyikan BottomNavBar saat search bar aktif/hasil ditampilkan
             if (!isSearchBarFocused && !searchExecuted) {
                 BottomNavBar(navController = navController)
             }
@@ -146,7 +132,6 @@ fun UserProfileScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            // --- LOGIKA TAMPILAN DINAMIS ---
             if (isSearchBarFocused) {
                 SearchHistoryView(
                     history = searchUiState.searchHistory,
@@ -167,7 +152,6 @@ fun UserProfileScreen(
                     }
                 )
             } else {
-                // Tampilan default profile screen
                 DefaultUserProfileContent(
                     navController = navController,
                     userProducts = userProducts,
@@ -180,34 +164,7 @@ fun UserProfileScreen(
     }
 }
 
-@Composable
-private fun DeleteConfirmationDialog(
-    productName: String,
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Konfirmasi Hapus") },
-        text = { Text("Apakah Anda yakin ingin menghapus produk \"$productName\"?") },
-        confirmButton = {
-            Button(
-                onClick = onConfirm,
-                colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
-            ) {
-                Text("Hapus")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Batal")
-
-
-            }
-        }
-    )
-}
-
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun DefaultUserProfileContent(
     navController: NavController,
@@ -218,22 +175,21 @@ fun DefaultUserProfileContent(
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-
     var showDeleteDialog by remember { mutableStateOf(false) }
     var productToDelete by remember { mutableStateOf<Product?>(null) }
 
-    val addCardText = if (userProducts.isEmpty()) {
-        "Start Selling"
-    } else {
-        "Add Product"
-    }
+    var selectedTabIndex by remember { mutableStateOf(0) }
+    val tabs = listOf("Listing", "Terjual")
+
+    val availableProducts = userProducts.filter { it.stock > 0 }
+    val soldProducts = userProducts.filter { it.stock <= 0 }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .background(Color(0xFFF5F7F9)) // Abu muda bagian bawah
+            .background(Color(0xFFF5F7F9))
     ) {
-        // Background abu tua untuk bagian atas
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -252,7 +208,7 @@ fun DefaultUserProfileContent(
                         .fillMaxWidth()
                         .padding(horizontal = 12.dp),
                     shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFFFF)),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
                     elevation = CardDefaults.cardElevation(0.dp)
                 ) {
                     Row(
@@ -323,42 +279,35 @@ fun DefaultUserProfileContent(
 
                         if (isMyProfile) {
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    listOf(R.drawable.edit2 to "Edit", R.drawable.logout to "Logout").forEach { (iconId, desc) ->
-                                        Box(
-                                            modifier = Modifier
-                                                .size(36.dp)
-                                                .background(Color(0xFFF0F0F0), shape = RoundedCornerShape(8.dp))
-                                                .clickable {
-                                                    when (desc) {
-                                                        "Edit" -> {
-                                                            navController.navigate(Screen.EditProfile.route)
-                                                        }
-                                                        "Logout" -> {
-                                                            coroutineScope.launch {
-                                                                performLogout(context)
-                                                            }
-                                                        }
-
-
+                                listOf(R.drawable.edit2 to "Edit", R.drawable.logout to "Logout").forEach { (iconId, desc) ->
+                                    Box(
+                                        modifier = Modifier
+                                            .size(36.dp)
+                                            .background(Color(0xFFF0F0F0), shape = RoundedCornerShape(8.dp))
+                                            .clickable {
+                                                when (desc) {
+                                                    "Edit" -> {
+                                                        navController.navigate(Screen.EditProfile.route)
                                                     }
-                                                },
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Icon(
-                                                painter = painterResource(id = iconId),
-                                                contentDescription = desc,
-                                                tint = Color.Black,
-                                                modifier = Modifier.size(18.dp)
-                                            )
-                                        }
+                                                    "Logout" -> {
+                                                        coroutineScope.launch {
+                                                            performLogout(context)
+                                                        }
+                                                    }
+                                                }
+                                            },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(id = iconId),
+                                            contentDescription = desc,
+                                            tint = Color.Black,
+                                            modifier = Modifier.size(18.dp)
+                                        )
                                     }
                                 }
                             }
                         }
-
-
-
                     }
                 }
 
@@ -369,7 +318,7 @@ fun DefaultUserProfileContent(
                         .fillMaxWidth()
                         .padding(horizontal = 12.dp),
                     shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFFFF)),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
                     elevation = CardDefaults.cardElevation(0.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
@@ -398,14 +347,14 @@ fun DefaultUserProfileContent(
                 Icon(
                     painter = painterResource(id = R.drawable.history),
                     contentDescription = "Riwayat Pesanan",
-                    modifier = Modifier.size(10.dp)
+                    modifier = Modifier.size(24.dp)
                 )
                 Spacer(modifier = Modifier.width(16.dp))
                 Text("Riwayat Pesanan", fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
                 Icon(
                     painter = painterResource(id = R.drawable.kanan),
                     contentDescription = null,
-                    modifier = Modifier.size(10.dp)
+                    modifier = Modifier.size(16.dp)
                 )
             }
         }
@@ -415,55 +364,102 @@ fun DefaultUserProfileContent(
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp, vertical = 16.dp),
             shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFFFF)),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
             elevation = CardDefaults.cardElevation(1.dp)
         ) {
-            Column(
-                modifier = Modifier.padding(16.dp)
-            ) {
-                Text("Listing", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(16.dp))
-
-                LazyVerticalStaggeredGrid(
-                    columns = StaggeredGridCells.Fixed(2),
-                    modifier = Modifier.heightIn(max = 1000.dp),
-                    verticalItemSpacing = 12.dp,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+            Column(modifier = Modifier.padding(top = 16.dp)) {
+                TabRow(
+                    selectedTabIndex = selectedTabIndex,
+                    containerColor = Color.White,
+                    contentColor = Color.Black
                 ) {
-                    items(userProducts, key = { it.id }) { product ->
-                        UserProductCard(
-                            product = product,
-                            onClick = {
-                                navController.navigate("productDetail/${product.id}")
-                            },
-                            onEditClick = { navController.navigate("add_product_edit/${product.id}") },
-                            onDeleteClick = {
-                                productToDelete = product
-                                showDeleteDialog = true
-                            }
+                    tabs.forEachIndexed { index, title ->
+                        Tab(
+                            selected = selectedTabIndex == index,
+                            onClick = { selectedTabIndex = index },
+                            text = { Text(title) }
                         )
                     }
-                    item {
-                        AddProductCard(text = addCardText) { navController.navigate(Screen.Add.route) }
-                    }
+                }
+
+                when (selectedTabIndex) {
+                    0 -> ProductGrid(
+                        navController = navController,
+                        products = availableProducts,
+                        showAddCard = isMyProfile,
+                        onDeleteClick = { product ->
+                            productToDelete = product
+                            showDeleteDialog = true
+                        }
+                    )
+                    1 -> ProductGrid(
+                        navController = navController,
+                        products = soldProducts,
+                        showAddCard = false,
+                        onDeleteClick = { product ->
+                            productToDelete = product
+                            showDeleteDialog = true
+                        }
+                    )
                 }
             }
         }
     }
 
     if (showDeleteDialog && productToDelete != null) {
-        DeleteConfirmationDialog(
-            productName = productToDelete!!.name,
-            onConfirm = {
-                productViewModel.deleteProduct(productToDelete!!.id)
-                showDeleteDialog = false
-                productToDelete = null
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Hapus Produk") },
+            text = { Text("Anda yakin ingin menghapus '${productToDelete?.name}'?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        productToDelete?.let { productViewModel.deleteProduct(it.id) }
+                        showDeleteDialog = false
+                        productToDelete = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+                ) { Text("Hapus") }
             },
-            onDismiss = {
-                showDeleteDialog = false
-                productToDelete = null
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) { Text("Batal") }
             }
         )
+    }
+}
+
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun ProductGrid(
+    navController: NavController,
+    products: List<Product>,
+    showAddCard: Boolean,
+    onDeleteClick: (Product) -> Unit
+) {
+    val addCardText = if (products.isEmpty() && showAddCard) "Mulai Berjualan" else "Tambah Produk"
+
+    LazyVerticalStaggeredGrid(
+        columns = StaggeredGridCells.Fixed(2),
+        modifier = Modifier
+            .padding(16.dp)
+            .heightIn(max = 1000.dp),
+        verticalItemSpacing = 12.dp,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        items(products, key = { it.id }) { product ->
+            UserProductCard(
+                product = product,
+                onClick = { navController.navigate("productDetail/${product.id}") },
+                onEditClick = { navController.navigate("add_product_edit/${product.id}") },
+                onDeleteClick = { onDeleteClick(product) }
+            )
+        }
+        if (showAddCard) {
+            item {
+                AddProductCard(text = addCardText) { navController.navigate(Screen.Add.route) }
+            }
+        }
     }
 }
 
@@ -477,13 +473,10 @@ fun UserProductCard(
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
     val formatCurrency = remember { NumberFormat.getCurrencyInstance(Locale("in", "ID")) }
-    val isSoldOut = product.stock <= 0 // Cek apakah produk sold out
+    val isSoldOut = product.stock <= 0
 
     Card(
-        modifier = Modifier.clickable(
-            enabled = !isSoldOut, // Nonaktifkan klik jika sold out
-            onClick = onClick
-        ),
+        modifier = Modifier.clickable(enabled = !isSoldOut, onClick = onClick),
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(2.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White)
@@ -497,34 +490,27 @@ fun UserProductCard(
                     .background(Color.LightGray)
             ) {
                 AsyncImage(
-                    model = product.imageUrls.firstOrNull() ?: product.imageUrl, // Handle both new and old data model
+                    model = product.imageUrls.firstOrNull() ?: product.imageUrl,
                     contentDescription = product.name,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
                 )
-
                 if (isSoldOut) {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(Color.Black.copy(alpha = 0.5f)), // Overlay semi-transparan
+                            .background(Color.Black.copy(alpha = 0.5f)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = "SOLD OUT",
-                            color = Color.White,
-                            fontSize = 22.sp, // Ukuran font besar
-                            fontWeight = FontWeight.Bold
-                        )
+                        Text("SOLD OUT", color = Color.White, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                     }
                 }
             }
 
-
             Column(
                 modifier = Modifier
                     .padding(12.dp)
-                    .height(88.dp) // Beri tinggi tetap untuk area teks
+                    .height(88.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -537,25 +523,27 @@ fun UserProductCard(
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.weight(1f)
                     )
-                    Box {
-                        IconButton(
-                            onClick = { menuExpanded = true },
-                            modifier = Modifier.size(24.dp)
-                        ) {
-                            Icon(Icons.Default.MoreVert, contentDescription = "More options")
-                        }
-                        DropdownMenu(
-                            expanded = menuExpanded,
-                            onDismissRequest = { menuExpanded = false }
-                        ) {
-                            DropdownMenuItem(text = { Text("Edit") }, onClick = {
-                                menuExpanded = false
-                                onEditClick()
-                            })
-                            DropdownMenuItem(text = { Text("Delete") }, onClick = {
-                                menuExpanded = false
-                                onDeleteClick()
-                            })
+                    if (!isSoldOut) { // Sembunyikan menu jika sudah terjual
+                        Box {
+                            IconButton(
+                                onClick = { menuExpanded = true },
+                                modifier = Modifier.size(24.dp)
+                            ) {
+                                Icon(Icons.Default.MoreVert, contentDescription = "More options")
+                            }
+                            DropdownMenu(
+                                expanded = menuExpanded,
+                                onDismissRequest = { menuExpanded = false }
+                            ) {
+                                DropdownMenuItem(text = { Text("Edit") }, onClick = {
+                                    menuExpanded = false
+                                    onEditClick()
+                                })
+                                DropdownMenuItem(text = { Text("Hapus") }, onClick = {
+                                    menuExpanded = false
+                                    onDeleteClick()
+                                })
+                            }
                         }
                     }
                 }
@@ -566,12 +554,11 @@ fun UserProductCard(
                     overflow = TextOverflow.Ellipsis
                 )
                 Spacer(modifier = Modifier.height(4.dp))
-                val textColor = if (isSoldOut) Color.Gray.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurface // Warna teks abu-abu jika sold out
                 Text(
                     text = formatCurrency.format(product.price),
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
-                    color = textColor
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
         }
@@ -579,7 +566,7 @@ fun UserProductCard(
 }
 
 @Composable
-fun AddProductCard(text: String, onClick: () -> Unit) { // Tambahkan parameter 'text'
+fun AddProductCard(text: String, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -598,7 +585,7 @@ fun AddProductCard(text: String, onClick: () -> Unit) { // Tambahkan parameter '
                     tint = Color.DarkGray
                 )
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(text, color = Color.DarkGray, fontWeight = FontWeight.SemiBold) // <-- Gunakan parameter 'text'
+                Text(text, color = Color.DarkGray, fontWeight = FontWeight.SemiBold)
             }
         }
     }
@@ -608,9 +595,7 @@ fun AddProductCard(text: String, onClick: () -> Unit) { // Tambahkan parameter '
 @Preview(showBackground = true)
 @Composable
 fun UserProfileScreenPreview() {
-    // Membuat ViewModel palsu agar tidak crash di mode preview
     val fakeSearchViewModel = object : SearchViewModel() {}
-    // Diasumsikan ProductViewModel juga aman untuk diinisiasi seperti ini untuk preview
     val fakeProductViewModel = ProductViewModel()
     val fakeProfileViewModel = ProfileViewModel()
 
@@ -624,6 +609,7 @@ fun UserProfileScreenPreview() {
         )
     }
 }
+
 fun performLogout(context: Context) {
     val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN).build()
     val googleSignInClient = GoogleSignIn.getClient(context, gso)

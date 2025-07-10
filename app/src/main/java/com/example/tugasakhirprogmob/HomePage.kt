@@ -216,6 +216,10 @@ fun MainApp() {
             OrderSuccessScreen(navController = navController)
         }
 
+        composable("notifications") {
+            NotificationScreen(navController = navController)
+        }
+
         composable(
             route = "productDetail/{productId}",
             arguments = listOf(navArgument("productId") { type = NavType.StringType })
@@ -349,7 +353,9 @@ fun HomeScreen(
                     },
                     onSearch = { performSearch(it) },
                     onFocusChange = { isFocused -> isSearchBarFocused = isFocused },
+                    onNotificationClick = { navController.navigate("notifications") },
                     onCartClick = { navController.navigate(Screen.Cart.route) }
+
                 )
             }
         },

@@ -34,7 +34,7 @@ import java.util.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ViewCartScreen(
-    navController: NavController, // Tambahkan ini
+    navController: NavController,
     onBackClick: () -> Unit,
     cartViewModel: CartViewModel = viewModel()
 ) {
@@ -96,8 +96,9 @@ fun ViewCartScreen(
                     items(cartItems, key = { it.id }) { item ->
                         DynamicCartItem(
                             cartItem = item,
-                            onIncrease = { cartViewModel.updateQuantity(item.id, item.quantity + 1) },
-                            onDecrease = { cartViewModel.updateQuantity(item.id, item.quantity - 1) },
+                            // <-- **PERBAIKAN: Mengirim `item.productId` ke fungsi**
+                            onIncrease = { cartViewModel.updateQuantity(item.id, item.productId, item.quantity + 1) },
+                            onDecrease = { cartViewModel.updateQuantity(item.id, item.productId, item.quantity - 1) },
                             modifier = Modifier.padding(horizontal = 16.dp)
                         )
                         Spacer(Modifier.height(16.dp))
@@ -190,7 +191,7 @@ fun DynamicCartItem(
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = formatCurrency.format(cartItem.price),
+                text = formatCurrency.format(cartItem.price * cartItem.quantity), // Menampilkan total harga per item
                 fontSize = 16.sp,
                 color = Color.Black
             )
@@ -200,10 +201,16 @@ fun DynamicCartItem(
             verticalArrangement = Arrangement.spacedBy(4.dp),
             modifier = Modifier.padding(start = 8.dp)
         ) {
-            IconButton(onClick = onIncrease, modifier = Modifier.size(20.dp)) {
+            // Menonaktifkan tombol + jika kuantitas sudah mencapai stok yang tersedia
+            IconButton(
+                onClick = onIncrease,
+                modifier = Modifier.size(20.dp),
+                enabled = cartItem.quantity < cartItem.availableStock
+            ) {
                 Icon(
                     painter = painterResource(id = R.drawable.plus),
-                    contentDescription = "Increase quantity"
+                    contentDescription = "Increase quantity",
+                    tint = if (cartItem.quantity < cartItem.availableStock) LocalContentColor.current else Color.Gray.copy(alpha = 0.5f)
                 )
             }
             Text(
@@ -226,10 +233,9 @@ fun DynamicCartItem(
 @Composable
 fun ViewCartScreenPreview() {
     TugasAkhirProgmobTheme {
-        // Kita buat NavController palsu (dummy) khusus untuk preview
         val dummyNavController = rememberNavController()
         ViewCartScreen(
-            navController = dummyNavController, // Berikan dummy NavController
+            navController = dummyNavController,
             onBackClick = {}
         )
     }

@@ -1,5 +1,6 @@
 package com.example.tugasakhirprogmob
 
+import android.annotation.SuppressLint
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -59,6 +60,7 @@ fun ProductCreateScreen(
     var selectedCategory by remember { mutableStateOf("Category") }
     var imageUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
     var existingImageUrls by remember { mutableStateOf<List<String>>(emptyList()) }
+    var stock by remember { mutableStateOf("1") } // <-- STATE BARU UNTUK STOK
 
     // Mengamati state dari ViewModel
     val isLoading by productViewModel.isLoading.collectAsState()
@@ -69,7 +71,6 @@ fun ProductCreateScreen(
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetMultipleContents()
     ) { uris: List<Uri> ->
-        // Tambahkan gambar yang baru dipilih ke dalam list yang sudah ada
         imageUris = imageUris + uris
     }
 
@@ -78,7 +79,7 @@ fun ProductCreateScreen(
         if (productId != null) {
             productDetailViewModel.fetchProductById(productId)
         } else {
-            // Reset fields if navigating to add new product
+            // Reset fields jika membuat produk baru
             productName = ""
             askingPrice = ""
             brand = ""
@@ -86,6 +87,7 @@ fun ProductCreateScreen(
             selectedCategory = "Category"
             imageUris = emptyList()
             existingImageUrls = emptyList()
+            stock = "1" // Reset stok
         }
     }
 
@@ -97,18 +99,18 @@ fun ProductCreateScreen(
             brand = product.brand
             description = product.description
             selectedCategory = product.category
-            // Handle existing image URLs (convert them if necessary or just store them)
             existingImageUrls = product.imageUrls.ifEmpty { listOfNotNull(product.imageUrl) }
-            imageUris = emptyList() // Clear new image Uris when loading existing product
+            stock = product.stock.toString() // Isi stok dari produk yang diedit
+            imageUris = emptyList()
         }
     }
 
     // Efek ini akan berjalan ketika `isSuccess` menjadi true
     LaunchedEffect(isSuccess) {
         if (isSuccess) {
-            Toast.makeText(context, "Product added successfully!", Toast.LENGTH_SHORT).show()
-            productViewModel.resetSuccessState() // Reset state agar tidak ter-trigger lagi
-            onBackClick() // Kembali ke halaman sebelumnya setelah berhasil
+            Toast.makeText(context, "Product saved successfully!", Toast.LENGTH_SHORT).show()
+            productViewModel.resetSuccessState()
+            onBackClick()
         }
     }
 
@@ -128,8 +130,6 @@ fun ProductCreateScreen(
             )
         },
         bottomBar = {
-            // Jika Anda memiliki SearchBottomNavBar, Anda bisa uncomment ini
-            // SearchBottomNavBar(selectedItem = 2)
             BottomNavBar(navController = navController)
         },
         containerColor = Color(0xFFF5F5F5)
@@ -150,10 +150,9 @@ fun ProductCreateScreen(
                     item { Spacer(modifier = Modifier.height(8.dp)) }
 
                     item {
-                        // Gabungkan gambar yang sudah ada dan yang baru diunggah untuk ditampilkan
                         val allImagesToDisplay = existingImageUrls + imageUris.map { it.toString() }
                         MultiImageUploader(
-                            imageUris = allImagesToDisplay.map { Uri.parse(it) }, // Convert strings back to Uri for display
+                            imageUris = allImagesToDisplay.map { Uri.parse(it) },
                             onAddClick = { imagePickerLauncher.launch("image/*") }
                         )
                     }
@@ -164,6 +163,11 @@ fun ProductCreateScreen(
 
                     item {
                         TitledTextField(title = "Asking Price", value = askingPrice, onValueChange = { askingPrice = it }, placeholder = "0.00", leadingText = "Rp.", keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+                    }
+
+                    // --- INPUT FIELD UNTUK STOK DITAMBAHKAN DI SINI ---
+                    item {
+                        TitledTextField(title = "Stock", value = stock, onValueChange = { stock = it }, placeholder = "e.g., 1", keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
                     }
 
                     item {
@@ -185,7 +189,7 @@ fun ProductCreateScreen(
 
                 Button(
                     onClick = {
-                        // Memanggil fungsi ViewModel untuk menambah/mengedit produk
+                        // Memanggil fungsi ViewModel dengan parameter stok
                         productViewModel.addOrUpdateProduct(
                             context = context,
                             productId = productId,
@@ -195,19 +199,22 @@ fun ProductCreateScreen(
                             category = selectedCategory,
                             description = description,
                             imageUris = imageUris,
-                            existingImageUrls = existingImageUrls
+                            existingImageUrls = existingImageUrls,
+                            stockStr = stock // <-- MENGIRIM DATA STOK
                         )
                     },
-                    modifier = Modifier.fillMaxWidth().padding(16.dp).height(56.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                        .height(56.dp),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color.Black),
-                    enabled = !isLoading // Tombol dinonaktifkan saat sedang loading
+                    enabled = !isLoading
                 ) {
-                    Text(text = "Add Listing", fontSize = 16.sp, color = Color.White)
+                    Text(text = "Save Listing", fontSize = 16.sp, color = Color.White)
                 }
             }
 
-            // Menampilkan indikator loading di tengah layar jika isLoading true
             if (isLoading) {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             }
@@ -230,7 +237,6 @@ fun MultiImageUploader(
                 .padding(8.dp)
         ) {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                // Tampilkan gambar yang sudah dipilih
                 items(imageUris) { uri ->
                     AsyncImage(
                         model = uri,
@@ -241,8 +247,6 @@ fun MultiImageUploader(
                         contentScale = ContentScale.Crop
                     )
                 }
-
-                // Tombol untuk menambah gambar lagi
                 item {
                     Box(
                         modifier = Modifier
@@ -304,7 +308,7 @@ fun CategoryDropdown(
     selectedCategory: String,
     onCategorySelected: (String) -> Unit
 ) {
-    val categories = listOf("Electronics", "Fashion", "Home & Kitchen", "Books")
+    val categories = listOf("Electronics", "Fashion", "Home & Kitchen", "Books", "Other")
     var expanded by remember { mutableStateOf(false) }
 
     Column(
@@ -321,15 +325,8 @@ fun CategoryDropdown(
                 onValueChange = {},
                 readOnly = true,
                 modifier = Modifier
-                    .fillMaxWidth(),
-//                    .menuAnchor(),
-                leadingIcon = {
-//                    Icon(
-////                        painter = painterResource(id = R.drawable.help), // Pastikan resource icon ini ada
-//                        contentDescription = null,
-//                        tint = Color.Gray
-//                    )
-                },
+                    .fillMaxWidth()
+                    .menuAnchor(),
                 trailingIcon = {
                     Icon(Icons.Default.ArrowDropDown, contentDescription = "Dropdown")
                 },
@@ -360,6 +357,7 @@ fun CategoryDropdown(
     }
 }
 
+@SuppressLint("ViewModelConstructorInComposable")
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
 fun ProductCreateScreenPreview() {

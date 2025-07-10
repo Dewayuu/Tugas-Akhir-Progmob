@@ -44,18 +44,15 @@ data class Product(
     val description: String = "",
     val category: String = "",
     val brand: String = "",
-    // Untuk data baru (mendukung banyak gambar)
     val imageUrls: List<String> = emptyList(),
-    // Untuk data lama (hanya satu gambar), dibuat nullable
     val imageUrl: String? = null,
     val sellerId: String = "",
     val sellerName: String = "",
     val postedAt: Timestamp? = null,
-    val viewCount: Long = 0
+    val viewCount: Long = 0,
+    val stock: Int = 1
 )
 
-// Data class untuk request penambahan produk baru
-// Ini memisahkan model untuk 'create' dari model untuk 'read'
 data class ProductRequest(
     val name: String,
     val price: Double,
@@ -66,8 +63,10 @@ data class ProductRequest(
     val sellerId: String,
     val sellerName: String,
     val postedAt: FieldValue = FieldValue.serverTimestamp(),
-    val viewCount: Long = 0
+    val viewCount: Long = 0,
+    val stock: Int
 )
+
 
 class ProductViewModel : ViewModel() {
 
@@ -182,8 +181,9 @@ class ProductViewModel : ViewModel() {
         brand: String,
         category: String,
         description: String,
-        imageUris: List<Uri>, // Diubah menjadi list
-        existingImageUrls: List<String> = emptyList()
+        imageUris: List<Uri>,
+        existingImageUrls: List<String> = emptyList(),
+        stockStr: String
     ) {
         if (name.isBlank() || priceStr.isBlank() || (imageUris.isEmpty() && existingImageUrls.isEmpty())) {
             Log.e("ProductViewModel", "Validation failed: Missing fields or images.")
@@ -222,6 +222,7 @@ class ProductViewModel : ViewModel() {
 
                 // Gabungkan gambar yang sudah ada dengan gambar yang baru diunggah
                 val finalImageUrls = existingImageUrls + newUploadedImageUrls.filter { it.isNotEmpty() }
+                val stockInt = stockStr.toIntOrNull() ?: 1
 
                 if (productId == null) {
                     // ADD NEW PRODUCT
@@ -233,7 +234,8 @@ class ProductViewModel : ViewModel() {
                         description = description,
                         imageUrls = finalImageUrls, // Simpan list URL
                         sellerId = currentUser.uid,
-                        sellerName = currentUser.displayName.orEmpty()
+                        sellerName = currentUser.displayName.orEmpty(),
+                        stock = stockInt
                     )
                     db.collection("products").add(newProduct).await()
                     Log.d("ProductViewModel", "Product added successfully to Firestore.")
@@ -245,15 +247,14 @@ class ProductViewModel : ViewModel() {
                         "brand" to brand,
                         "category" to category,
                         "description" to description,
-                        "imageUrls" to finalImageUrls
+                        "imageUrls" to finalImageUrls,
+                        "stock" to stockInt
                     )
                     db.collection("products").document(productId).update(updates).await()
                     Log.d("ProductViewModel", "Product $productId updated successfully in Firestore.")
                 }
 
                 _isSuccess.value = true
-                // Setelah berhasil tambah, ambil ulang daftar produk user
-//                fetchUserProducts()
             } catch (e: Exception) {
                 Log.e("ProductViewModel", "Error adding/updating product", e)
             } finally {

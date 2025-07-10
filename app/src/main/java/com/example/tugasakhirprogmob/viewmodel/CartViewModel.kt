@@ -3,7 +3,9 @@ package com.example.tugasakhirprogmob.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.Timestamp
 import com.google.firebase.auth.ktx.auth
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.ServerTimestamp
 import com.google.firebase.firestore.ktx.firestore
@@ -14,14 +16,17 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.util.Date
 
-// --- DATA CLASS DITEMPATKAN DI SINI ---
+
+// Definisi Product diimpor dari ProductViewModel, jadi kita tidak perlu mendefinisikannya lagi di sini.
+
 data class CartItem(
     val id: String = "",
     val productId: String = "",
     val name: String = "",
     val price: Double = 0.0,
     val imageUrl: String = "",
-    var quantity: Int = 1
+    var quantity: Int = 1,
+    val availableStock: Int = 1
 )
 
 data class Order(
@@ -33,7 +38,6 @@ data class Order(
     @ServerTimestamp
     val createdAt: Date? = null,
     val receiverName: String? = null,
-
     var alamatPengiriman: String = "",
     var statusPengiriman: String = "Menunggu Pembayaran",
     var nomorResi: String? = null,
@@ -52,10 +56,8 @@ class CartViewModel : ViewModel() {
     private val _subtotal = MutableStateFlow(0.0)
     val subtotal: StateFlow<Double> = _subtotal
 
-    // --- TAMBAHAN BARU ---
     private val _orderPlacedSuccessfully = MutableStateFlow(false)
     val orderPlacedSuccessfully: StateFlow<Boolean> = _orderPlacedSuccessfully
-    // ---------------------
 
     init {
         listenForCartChanges()
@@ -64,40 +66,56 @@ class CartViewModel : ViewModel() {
     fun placeOrder(alamat: String, metodePengiriman: String, totalDenganPengiriman: Double) {
         val userId = auth.currentUser?.uid
         if (userId == null || _cartItems.value.isEmpty()) {
+            Log.e("CartViewModel", "User tidak login atau keranjang kosong.")
             return
         }
 
         viewModelScope.launch {
+            val itemsToOrder = _cartItems.value
             try {
-                // 1. Buat objek Order baru dengan data dinamis
-                val newOrder = Order(
-                    userId = userId,
-                    items = _cartItems.value,
-                    totalPrice = totalDenganPengiriman, // Gunakan total harga baru
-                    status = "Pending",
-                    alamatPengiriman = alamat, // Gunakan alamat dari parameter
-                    metodePengiriman = metodePengiriman, // Gunakan metode dari parameter
-                    statusPengiriman = "Menunggu Pembayaran",
-                    receiverName = auth.currentUser?.displayName ?: "Pengguna"
-                )
+                db.runTransaction { transaction ->
+                    val productRefs = itemsToOrder.map { db.collection("products").document(it.productId) }
 
-                // 2. Simpan order baru ke koleksi 'orders'
-                db.collection("orders").add(newOrder).await()
-                Log.d("CartViewModel", "Pesanan berhasil dibuat.")
+                    val productSnapshots = productRefs.map { ref ->
+                        transaction.get(ref)
+                    }
 
-                // 3. Hapus semua item dari keranjang pengguna
-                val cartCollection = db.collection("users").document(userId).collection("cart")
-                val currentCartItems = cartCollection.get().await()
-                for (document in currentCartItems.documents) {
-                    document.reference.delete().await()
-                }
-                Log.d("CartViewModel", "Keranjang berhasil dikosongkan.")
+                    for ((index, item) in itemsToOrder.withIndex()) {
+                        val snapshot = productSnapshots[index]
+                        val currentStock = snapshot.getLong("stock")?.toInt() ?: 0
+                        if (currentStock < item.quantity) {
+                            throw Exception("Stok untuk '${item.name}' tidak mencukupi (sisa $currentStock).")
+                        }
+                    }
 
-                // 4. Beri tahu UI bahwa proses berhasil
+                    val newOrderRef = db.collection("orders").document()
+                    val newOrder = Order(
+                        userId = userId,
+                        items = itemsToOrder,
+                        totalPrice = totalDenganPengiriman,
+                        status = "Pending",
+                        alamatPengiriman = alamat,
+                        metodePengiriman = metodePengiriman,
+                        statusPengiriman = "Menunggu Pembayaran",
+                        receiverName = auth.currentUser?.displayName ?: "Pengguna"
+                    )
+                    transaction.set(newOrderRef, newOrder)
+
+                    for ((index, item) in itemsToOrder.withIndex()) {
+                        val productRef = productRefs[index]
+                        transaction.update(productRef, "stock", FieldValue.increment(-item.quantity.toLong()))
+                    }
+
+                    val cartCollectionRef = db.collection("users").document(userId).collection("cart")
+                    itemsToOrder.forEach { item -> transaction.delete(cartCollectionRef.document(item.id)) }
+
+                }.await()
+
+                Log.d("CartViewModel", "Transaksi BERHASIL: Pesanan dibuat, stok diperbarui, keranjang dikosongkan.")
                 _orderPlacedSuccessfully.value = true
 
             } catch (e: Exception) {
-                Log.e("CartViewModel", "Error saat membuat pesanan", e)
+                Log.e("CartViewModel", "Transaksi GAGAL: ${e.message}")
             }
         }
     }
@@ -105,7 +123,6 @@ class CartViewModel : ViewModel() {
     fun resetOrderStatus() {
         _orderPlacedSuccessfully.value = false
     }
-    // ------------------------------------------
 
     private fun listenForCartChanges() {
         val userId = auth.currentUser?.uid ?: return
@@ -129,35 +146,79 @@ class CartViewModel : ViewModel() {
         _subtotal.value = total
     }
 
-    fun addToCart(product: Product) {
+    // --- **FUNGSI BARU DITAMBAHKAN DI SINI** ---
+    fun addToCartWithQuantity(product: Product, quantity: Int) {
         val userId = auth.currentUser?.uid ?: return
+
+        if (product.stock < quantity) {
+            Log.e("CartViewModel", "Kuantitas ($quantity) melebihi stok (${product.stock}).")
+            return
+        }
+
         viewModelScope.launch {
             try {
                 val cartCollection = db.collection("users").document(userId).collection("cart")
                 val existingItemQuery = cartCollection.whereEqualTo("productId", product.id).get().await()
+
                 if (existingItemQuery.isEmpty) {
-                    val newItem = CartItem(productId = product.id, name = product.name, price = product.price, imageUrl = product.imageUrls.firstOrNull() ?: product.imageUrl ?: "", quantity = 1)
+                    // Item baru
+                    val newItem = CartItem(
+                        productId = product.id,
+                        name = product.name,
+                        price = product.price,
+                        imageUrl = product.imageUrls.firstOrNull() ?: product.imageUrl ?: "",
+                        quantity = quantity,
+                        availableStock = product.stock
+                    )
                     cartCollection.add(newItem).await()
                 } else {
+                    // Item sudah ada, update kuantitasnya
                     val docId = existingItemQuery.documents.first().id
                     val currentQuantity = existingItemQuery.documents.first().getLong("quantity")?.toInt() ?: 0
-                    cartCollection.document(docId).update("quantity", currentQuantity + 1).await()
+                    val newTotalQuantity = currentQuantity + quantity
+
+                    if (newTotalQuantity <= product.stock) {
+                        cartCollection.document(docId).update("quantity", newTotalQuantity).await()
+                    } else {
+                        Log.w("CartViewModel", "Gagal menambah, total kuantitas di keranjang akan melebihi stok.")
+                    }
                 }
             } catch (e: Exception) {
-                Log.e("CartViewModel", "Error saat menambahkan ke keranjang", e)
+                Log.e("CartViewModel", "Error saat addToCartWithQuantity", e)
             }
         }
     }
 
-    fun updateQuantity(cartItemId: String, newQuantity: Int) {
+    // Fungsi addToCart yang lama (jika masih diperlukan di tempat lain)
+    fun addToCart(product: Product) {
+        addToCartWithQuantity(product, 1) // Cukup panggil fungsi baru dengan kuantitas 1
+    }
+
+    fun updateQuantity(cartItemId: String, productId: String, newQuantity: Int) {
         val userId = auth.currentUser?.uid ?: return
         val cartItemRef = db.collection("users").document(userId).collection("cart").document(cartItemId)
-        if (newQuantity > 0) {
-            cartItemRef.update("quantity", newQuantity)
-        } else {
-            cartItemRef.delete()
+
+        viewModelScope.launch {
+            try {
+                if (newQuantity <= 0) {
+                    cartItemRef.delete().await()
+                    return@launch
+                }
+
+                val productRef = db.collection("products").document(productId).get().await()
+                val productStock = productRef.getLong("stock")?.toInt() ?: 0
+
+                if (newQuantity <= productStock) {
+                    cartItemRef.update("quantity", newQuantity).await()
+                } else {
+                    Log.w("CartViewModel", "Kuantitas melebihi stok yang tersedia ($productStock).")
+                }
+            } catch (e: Exception) {
+                Log.e("CartViewModel", "Gagal memperbarui kuantitas", e)
+            }
         }
     }
+
 
     override fun onCleared() {
         super.onCleared()

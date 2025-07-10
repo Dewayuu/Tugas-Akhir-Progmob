@@ -24,7 +24,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -42,14 +41,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -69,9 +71,6 @@ import com.example.tugasakhirprogmob.viewmodel.ProfileViewModel
 import com.example.tugasakhirprogmob.viewmodel.SearchViewModel
 import java.text.NumberFormat
 import java.util.Locale
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.text.style.TextOverflow
 
 @Composable
 fun MainApp() {
@@ -205,15 +204,13 @@ fun MainApp() {
                 navController = navController,
                 orderId = backStackEntry.arguments?.getString("orderId") ?: "",
                 method = backStackEntry.arguments?.getString("method") ?: "",
-                profileViewModel = profileViewModel // <-- TERUSKAN VIEWMODEL YANG SUDAH ADA
+                profileViewModel = profileViewModel
             )
         }
 
-        // --- RUTE DUPLIKAT DIHAPUS, HANYA ADA SATU INI ---
         composable("order_success") {
             OrderSuccessScreen(navController = navController)
         }
-        // ---------------------------------------------------
 
         composable(
             route = "productDetail/{productId}",
@@ -230,7 +227,6 @@ fun MainApp() {
                 navController.popBackStack()
             }
         }
-        //  EDIT PRODUK
         composable(
             route = "add_product_edit/{productId}",
             arguments = listOf(navArgument("productId") { type = NavType.StringType })
@@ -240,7 +236,7 @@ fun MainApp() {
                 navController = navController,
                 onBackClick = { navController.popBackStack() },
                 productViewModel = productViewModel,
-                productId = productId // Teruskan product ID ke ProductCreateScreen
+                productId = productId
             )
         }
         composable(
@@ -249,7 +245,6 @@ fun MainApp() {
         ) { backStackEntry ->
             val sellerId = backStackEntry.arguments?.getString("sellerId")
             if (sellerId != null) {
-                // Panggil Composable baru untuk menampilkan profil penjual
                 SellerProfileScreen(
                     sellerId = sellerId,
                     navController = navController
@@ -471,24 +466,78 @@ fun SearchResultsUI(query: String, products: List<Product>, navController: NavCo
 @Composable
 fun ProductCard(product: Product, navController: NavController) {
     val formatCurrency = remember { NumberFormat.getCurrencyInstance(Locale("in", "ID")) }
-    Column(modifier = Modifier.clickable {
-        navController.navigate("productDetail/${product.id}")
-    }) {
-        val displayImage = if (product.imageUrls.isNotEmpty()) {
-            product.imageUrls.first()
-        } else {
-            product.imageUrl
-        }
-        AsyncImage(
-            model = displayImage,
-            contentDescription = product.name,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(12.dp)).background(Color.LightGray)
+    val isSoldOut = product.stock <= 0
+
+    Column(
+        modifier = Modifier.clickable(
+            enabled = !isSoldOut,
+            onClick = { navController.navigate("productDetail/${product.id}") }
         )
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f)
+                .clip(RoundedCornerShape(12.dp))
+                .background(Color.LightGray)
+        ) {
+            val displayImage = if (product.imageUrls.isNotEmpty()) {
+                product.imageUrls.first()
+            } else {
+                product.imageUrl
+            }
+            AsyncImage(
+                model = displayImage,
+                contentDescription = product.name,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+
+            if (isSoldOut) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.5f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "SOLD OUT",
+                        color = Color.White,
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+
         Spacer(modifier = Modifier.height(8.dp))
+
+        val textColor = if (isSoldOut) Color.Gray.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurface
+
         Text(product.brand, style = MaterialTheme.typography.labelSmall, color = Color.Gray, maxLines = 1)
-        Text(product.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold, maxLines = 1)
-        Text(formatCurrency.format(product.price), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+        Text(
+            text = product.name,
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            color = textColor
+        )
+        Text(
+            text = formatCurrency.format(product.price),
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Bold,
+            color = textColor
+        )
+
+        // --- TAMBAHKAN KODE INI UNTUK MENAMPILKAN STOK ---
+        if (!isSoldOut) {
+            Text(
+                text = "Sisa stok: ${product.stock}",
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.Gray
+            )
+        }
+        // ---------------------------------------------
     }
 }
 
@@ -504,7 +553,7 @@ fun FeaturedProductBanner(product: Product?, navController: NavController) {
             .clip(RoundedCornerShape(16.dp))
             .background(Color.LightGray)
             .clickable(
-                enabled = product != null,
+                enabled = product != null && product.stock > 0,
                 onClick = {
                     navController.navigate("productDetail/${product?.id}")
                 }
@@ -521,7 +570,7 @@ fun FeaturedProductBanner(product: Product?, navController: NavController) {
                 .matchParentSize()
                 .background(
                     Brush.verticalGradient(
-                        colors = listOf(Color.Transparent, Color.LightGray.copy(alpha = 0.3f)),
+                        colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.6f)),
                         startY = 100f
                     )
                 )
@@ -532,7 +581,7 @@ fun FeaturedProductBanner(product: Product?, navController: NavController) {
                 .padding(16.dp)
         ) {
             Text(
-                text = "Trending", // PERUBAHAN: Mengganti teks judul banner
+                text = "Trending",
                 color = Color.White,
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold
@@ -633,7 +682,7 @@ fun SellerProfileScreen(
                     userProducts = sellerProducts,
                     productViewModel = productViewModel,
                     userProfile = sellerProfile,
-                    isMyProfile = false // Tandai bahwa ini bukan profil pengguna sendiri
+                    isMyProfile = false
                 )
             }
         } else {

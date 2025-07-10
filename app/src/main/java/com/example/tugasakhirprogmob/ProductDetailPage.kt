@@ -67,6 +67,7 @@ fun ProductDetailScreen(
     // Panggil fetchProductById saat layar pertama kali dibuat
     LaunchedEffect(productId) {
         viewModel.fetchProductById(productId)
+        viewModel.incrementViewCount(productId) // Menambah jumlah view setiap kali halaman ini dibuka
     }
 
     Scaffold(

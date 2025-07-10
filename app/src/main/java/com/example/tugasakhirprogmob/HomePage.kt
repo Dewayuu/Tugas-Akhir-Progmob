@@ -70,9 +70,8 @@ import com.example.tugasakhirprogmob.viewmodel.SearchViewModel
 import java.text.NumberFormat
 import java.util.Locale
 import androidx.compose.runtime.saveable.rememberSaveable
-
-
-
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.text.style.TextOverflow
 
 @Composable
 fun MainApp() {
@@ -271,6 +270,7 @@ fun HomeScreen(
     val focusManager = LocalFocusManager.current
 
     val realProducts by productViewModel.products.collectAsStateWithLifecycle()
+    val mostViewedProduct by productViewModel.mostViewedProduct.collectAsStateWithLifecycle()
     val isLoading by productViewModel.isLoading.collectAsStateWithLifecycle()
     val searchUiState by searchViewModel.uiState.collectAsStateWithLifecycle()
 
@@ -355,19 +355,23 @@ fun HomeScreen(
                     }
                 )
             } else {
-                DefaultHomeScreenContent(products = realProducts, navController = navController)
+                DefaultHomeScreenContent(
+                    products = displayedProducts,
+                    navController = navController,
+                    mostViewedProduct = mostViewedProduct
+                )
             }
         }
     }
 }
 
 @Composable
-fun DefaultHomeScreenContent(products: List<Product>, navController: NavController) {
+fun DefaultHomeScreenContent(products: List<Product>, navController: NavController, mostViewedProduct: Product?) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 8.dp)
     ) {
-        item { TopSellingBanner() }
+        item {  FeaturedProductBanner(product = mostViewedProduct, navController = navController) }
         item { CategoryRow() }
         item {
             Row(
@@ -487,6 +491,65 @@ fun ProductCard(product: Product, navController: NavController) {
         Text(formatCurrency.format(product.price), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
     }
 }
+
+@Composable
+fun FeaturedProductBanner(product: Product?, navController: NavController) {
+    val bannerImage = product?.imageUrls?.firstOrNull() ?: product?.imageUrl
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(180.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color.LightGray)
+            .clickable(
+                enabled = product != null,
+                onClick = {
+                    navController.navigate("productDetail/${product?.id}")
+                }
+            )
+    ) {
+        AsyncImage(
+            model = bannerImage,
+            contentDescription = "Featured Product Banner",
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.matchParentSize()
+        )
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(Color.Transparent, Color.LightGray.copy(alpha = 0.3f)),
+                        startY = 100f
+                    )
+                )
+        )
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(16.dp)
+        ) {
+            Text(
+                text = "Trending", // PERUBAHAN: Mengganti teks judul banner
+                color = Color.White,
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold
+            )
+            if (product != null) {
+                Text(
+                    text = product.name,
+                    color = Color.White.copy(alpha = 0.9f),
+                    style = MaterialTheme.typography.bodyLarge,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
 
 @Composable
 fun TopSellingBanner() {

@@ -50,7 +50,8 @@ data class Product(
     val imageUrl: String? = null,
     val sellerId: String = "",
     val sellerName: String = "",
-    val postedAt: Timestamp? = null
+    val postedAt: Timestamp? = null,
+    val viewCount: Long = 0
 )
 
 // Data class untuk request penambahan produk baru
@@ -64,7 +65,8 @@ data class ProductRequest(
     val imageUrls: List<String>,
     val sellerId: String,
     val sellerName: String,
-    val postedAt: FieldValue = FieldValue.serverTimestamp()
+    val postedAt: FieldValue = FieldValue.serverTimestamp(),
+    val viewCount: Long = 0
 )
 
 class ProductViewModel : ViewModel() {
@@ -101,6 +103,9 @@ class ProductViewModel : ViewModel() {
 
     private val _isSuccess = MutableStateFlow(false)
     val isSuccess: StateFlow<Boolean> = _isSuccess
+
+    private val _mostViewedProduct = MutableStateFlow<Product?>(null)
+    val mostViewedProduct: StateFlow<Product?> = _mostViewedProduct
 
     init {
         // Panggil listener saat ViewModel pertama kali dibuat
@@ -146,6 +151,7 @@ class ProductViewModel : ViewModel() {
                         doc.toObject(Product::class.java)?.copy(id = doc.id)
                     }
                     _products.value = allProductList
+                    _mostViewedProduct.value = allProductList.maxByOrNull { it.viewCount }
                 }
             }
     }

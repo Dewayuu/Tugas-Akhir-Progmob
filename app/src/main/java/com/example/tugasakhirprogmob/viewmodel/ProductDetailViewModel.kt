@@ -3,6 +3,7 @@ package com.example.tugasakhirprogmob.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.firestore.ktx.toObject
 import com.google.firebase.ktx.Firebase
@@ -27,7 +28,19 @@ class ProductDetailViewModel : ViewModel() {
     private val _sellerProfile = MutableStateFlow<UserProfile?>(null)
     val sellerProfile: StateFlow<UserProfile?> = _sellerProfile
 
-    // Fungsi untuk mengambil detail satu produk berdasarkan ID
+    fun incrementViewCount(productId: String) {
+        viewModelScope.launch {
+            try {
+                val productRef = db.collection("products").document(productId)
+                // Menggunakan FieldValue.increment untuk operasi atomik yang aman
+                productRef.update("viewCount", FieldValue.increment(1)).await()
+                Log.d("ProductDetailVM", "View count for $productId incremented.")
+            } catch (e: Exception) {
+                // Error ini tidak perlu ditampilkan ke user, cukup log saja
+                Log.e("ProductDetailVM", "Error incrementing view count", e)
+            }
+        }
+    }
 
     // --- FUNGSI DIAMBIL ULANG DENGAN LOGIKA YANG LEBIH BAIK ---
     fun fetchProductById(productId: String) {
@@ -41,6 +54,9 @@ class ProductDetailViewModel : ViewModel() {
                 val productData = productDoc.toObject<Product>()?.copy(id = productDoc.id)
 
                 if (productData != null) {
+
+                    Log.d("ProductDetailVM", "Product '${productData.name}' fetched with ${productData.viewCount} views.")
+
                     // Langsung set data produk agar UI bisa menampilkannya
                     _product.value = productData
 

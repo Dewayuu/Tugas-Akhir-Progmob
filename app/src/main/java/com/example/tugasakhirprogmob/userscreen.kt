@@ -47,9 +47,11 @@ import com.example.tugasakhirprogmob.viewmodel.SearchViewModel
 import com.example.tugasakhirprogmob.viewmodel.UserProfile
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.firebase.Timestamp
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
 import java.util.Locale
+import java.util.concurrent.TimeUnit
 
 
 @Composable
@@ -166,6 +168,19 @@ fun UserProfileScreen(
     }
 }
 
+private fun formatJoinDate(timestamp: Timestamp?): String {
+    if (timestamp == null) return "N/A"
+    val diff = Timestamp.now().seconds - timestamp.seconds
+    val years = TimeUnit.SECONDS.toDays(diff) / 365
+    val months = (TimeUnit.SECONDS.toDays(diff) % 365) / 30
+    return when {
+        years > 0 -> "${years}y, ${months}mo"
+        months > 0 -> "${months}mo"
+        else -> "<1mo"
+    }
+}
+
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun DefaultUserProfileContent(
@@ -249,19 +264,19 @@ fun DefaultUserProfileContent(
                                 overflow = TextOverflow.Ellipsis)
                         }
 
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("4,5", style = MaterialTheme.typography.bodyMedium)
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Icon(
-                                    painter = painterResource(id = R.drawable.star),
-                                    contentDescription = null,
-                                    tint = Color(0xFF4C4F5E),
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
-                            Text("3 Reviews", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-                        }
+//                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+//                            Row(verticalAlignment = Alignment.CenterVertically) {
+//                                Text("4,5", style = MaterialTheme.typography.bodyMedium)
+//                                Spacer(modifier = Modifier.width(4.dp))
+//                                Icon(
+//                                    painter = painterResource(id = R.drawable.star),
+//                                    contentDescription = null,
+//                                    tint = Color(0xFF4C4F5E),
+//                                    modifier = Modifier.size(16.dp)
+//                                )
+//                            }
+//                            Text("3 Reviews", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+//                        }
 
                         Spacer(modifier = Modifier.width(12.dp))
                         Box(
@@ -273,7 +288,12 @@ fun DefaultUserProfileContent(
                         Spacer(modifier = Modifier.width(12.dp))
 
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("2y,4mo", style = MaterialTheme.typography.bodyMedium)
+                            // --- PERUBAHAN 2: Menggunakan fungsi formatJoinDate ---
+                            Text(
+                                text = formatJoinDate(userProfile?.createdAt),
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold
+                            )
                             Text("Joined", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
                         }
 

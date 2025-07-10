@@ -73,15 +73,6 @@ fun TopBar(
         )
         Spacer(modifier = Modifier.width(8.dp))
 
-        // --- Tombol Lonceng Notifikasi ---
-        IconButton(onClick = onNotificationClick) {
-            Icon(
-                imageVector = Icons.Default.Notifications, // Menggunakan ikon bawaan yang mudah
-                contentDescription = "Notifikasi",
-                modifier = Modifier.size(28.dp)
-            )
-        }
-        // ---------------------------------
 
         IconButton(onClick = onCartClick) {
             Icon(painter = painterResource(id = R.drawable.cart), contentDescription = "Keranjang", modifier = Modifier.size(28.dp))

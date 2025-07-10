@@ -104,6 +104,7 @@ fun UserProfileScreen(
             Column (
                 modifier = Modifier.statusBarsPadding()
             ) {
+                // --- PERBAIKAN DI SINI ---
                 TopBar(
                     query = searchQuery,
                     onQueryChange = {
@@ -116,8 +117,9 @@ fun UserProfileScreen(
                     onSearch = { performSearch(it) },
                     onFocusChange = { isFocused -> isSearchBarFocused = isFocused },
                     onCartClick = onCartClick,
-                    onNotificationClick = { navController.navigate("notifications") }
+                    onNotificationClick = { navController.navigate("notifications") } // Menambahkan parameter yang hilang
                 )
+                // --- AKHIR PERBAIKAN ---
             }
         },
         bottomBar = {

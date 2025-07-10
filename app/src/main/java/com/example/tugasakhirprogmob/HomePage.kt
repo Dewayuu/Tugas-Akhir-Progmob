@@ -216,9 +216,6 @@ fun MainApp() {
             OrderSuccessScreen(navController = navController)
         }
 
-        composable("notifications") {
-            NotificationScreen(navController = navController)
-        }
 
         composable(
             route = "productDetail/{productId}",
@@ -295,15 +292,14 @@ fun HomeScreen(
     var searchQuery by remember { mutableStateOf("") }
     var isSearchBarFocused by remember { mutableStateOf(false) }
     var searchExecuted by remember { mutableStateOf(false) }
-    var selectedCategoryFilter by remember { mutableStateOf<String?>(null) } // Null berarti "All"
+    var selectedCategoryFilter by remember { mutableStateOf<String?>(null) }
 
-    // LOGIKA PEMFILTERAN
     val displayedProducts = remember(realProducts, searchQuery, searchExecuted, selectedCategoryFilter) {
         val filteredBySearch = if (searchExecuted && searchQuery.isNotBlank()) {
             realProducts.filter {
                 it.name.contains(searchQuery, ignoreCase = true) ||
                         it.brand.contains(searchQuery, ignoreCase = true) ||
-                        it.category.contains(searchQuery, ignoreCase = true) // Penting agar kategori juga dicari
+                        it.category.contains(searchQuery, ignoreCase = true)
             }
         } else {
             realProducts
@@ -315,14 +311,6 @@ fun HomeScreen(
             filteredBySearch
         }
     }
-//    val displayedProducts = if (searchExecuted) {
-//        realProducts.filter {
-//            it.name.contains(searchQuery, ignoreCase = true) ||
-//                    it.brand.contains(searchQuery, ignoreCase = true)
-//        }
-//    } else {
-//        realProducts
-//    }
 
     fun performSearch(query: String) {
         val trimmedQuery = query.trim()
@@ -334,7 +322,7 @@ fun HomeScreen(
         searchQuery = trimmedQuery
         searchExecuted = trimmedQuery.isNotBlank()
         isSearchBarFocused = false
-        selectedCategoryFilter = null // Reset category filter on search
+        selectedCategoryFilter = null
     }
 
     Scaffold(
@@ -342,6 +330,7 @@ fun HomeScreen(
             Column (
                 modifier = Modifier.statusBarsPadding()
             ) {
+                // --- PERBAIKAN DI SINI ---
                 TopBar(
                     query = searchQuery,
                     onQueryChange = {
@@ -353,10 +342,10 @@ fun HomeScreen(
                     },
                     onSearch = { performSearch(it) },
                     onFocusChange = { isFocused -> isSearchBarFocused = isFocused },
-                    onNotificationClick = { navController.navigate("notifications") },
-                    onCartClick = { navController.navigate(Screen.Cart.route) }
-
-                )
+                    onCartClick = { navController.navigate(Screen.Cart.route) },
+                    onNotificationClick = { navController.navigate("notifications") } // Tambahkan parameter yang hilang
+                ) // <-- Tanda kurung tutup yang hilang ditambahkan di sini
+                // --- AKHIR PERBAIKAN ---
             }
         },
         bottomBar = {
@@ -402,7 +391,6 @@ fun HomeScreen(
                     selectedCategoryFilter = selectedCategoryFilter,
                     onCategorySelected = { category ->
                         selectedCategoryFilter = category
-                        // Reset search-related states when category is selected
                         searchQuery = ""
                         searchExecuted = false
                         searchViewModel.resetSearchState(realProducts)

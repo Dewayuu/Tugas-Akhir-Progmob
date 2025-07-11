@@ -75,6 +75,7 @@ import java.text.NumberFormat
 import java.util.Locale
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.ui.draw.shadow
 
 @Composable
 fun MainApp() {
@@ -734,18 +735,18 @@ fun CategoryGridItem(
         Box(
             modifier = Modifier
                 .size(64.dp) // Ukuran kotak latar belakang ikon
+                .shadow(elevation = 2.dp, shape = RoundedCornerShape(12.dp))
                 .clip(RoundedCornerShape(12.dp))
-                .background(if (isSelected) MaterialTheme.colorScheme.primary else Color.LightGray), // Warna latar belakang berdasarkan seleksi
+                .background(if (isSelected) Color.LightGray else Color.White), // Ubah warna latar belakang default
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 painter = painterResource(id = iconResId), // Gunakan ID resource ikon yang diteruskan
                 contentDescription = text,
                 modifier = Modifier.size(36.dp), // Ukuran ikon itu sendiri
-                tint = if (isSelected) Color.White else Color.DarkGray // Warna ikon berdasarkan seleksi
             )
         }
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(6.dp))
         Text(
             text = text,
             style = MaterialTheme.typography.labelSmall, // Font kecil untuk nama kategori

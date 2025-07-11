@@ -42,14 +42,14 @@ fun OrderSuccessScreen(navController: NavController) {
             )
             Spacer(modifier = Modifier.height(24.dp))
             Text(
-                text = "Pesanan Berhasil Dibuat!",
+                text = "Order Placed Successfully!",
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Terima kasih telah berbelanja. Anda dapat melihat detail pesanan Anda di halaman profil.",
+                text = "Thank you for your purchase. You can view your order details on your profile page.",
                 style = MaterialTheme.typography.bodyLarge,
                 textAlign = TextAlign.Center,
                 color = Color.Gray
@@ -66,7 +66,7 @@ fun OrderSuccessScreen(navController: NavController) {
                     .height(52.dp)
             ) {
                 Text(
-                    "Kembali ke Beranda",
+                    "Back to Home",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold
                 )

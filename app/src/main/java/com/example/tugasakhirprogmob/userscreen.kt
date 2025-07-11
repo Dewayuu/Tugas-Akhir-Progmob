@@ -196,7 +196,7 @@ fun DefaultUserProfileContent(
     var productToDelete by remember { mutableStateOf<Product?>(null) }
 
     var selectedTabIndex by remember { mutableStateOf(0) }
-    val tabs = listOf("Listing", "Terjual")
+    val tabs = listOf("Listing", "Sold")
 
     val availableProducts = userProducts.filter { it.stock > 0 }
     val soldProducts = userProducts.filter { it.stock <= 0 }
@@ -368,11 +368,11 @@ fun DefaultUserProfileContent(
             ) {
                 Icon(
                     painter = painterResource(id = R.drawable.history),
-                    contentDescription = "Riwayat Pesanan",
+                    contentDescription = "Order History",
                     modifier = Modifier.size(24.dp)
                 )
                 Spacer(modifier = Modifier.width(16.dp))
-                Text("Riwayat Pesanan", fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                Text("Order History", fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
                 Icon(
                     painter = painterResource(id = R.drawable.kanan),
                     contentDescription = null,
@@ -561,7 +561,7 @@ fun UserProductCard(
                                     menuExpanded = false
                                     onEditClick()
                                 })
-                                DropdownMenuItem(text = { Text("Hapus") }, onClick = {
+                                DropdownMenuItem(text = { Text("Delete") }, onClick = {
                                     menuExpanded = false
                                     onDeleteClick()
                                 })

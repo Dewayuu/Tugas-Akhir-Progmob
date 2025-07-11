@@ -49,7 +49,7 @@ fun OrderHistoryScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Riwayat Pesanan", textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) },
+                title = { Text("Order History", textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(painter = painterResource(id = R.drawable.back), contentDescription = "Back")
@@ -69,7 +69,7 @@ fun OrderHistoryScreen(
             }
             orders.isEmpty() -> {
                 Box(modifier = Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
-                    Text("Anda belum memiliki riwayat pesanan.", color = Color.Gray)
+                    Text("You have no order history.", color = Color.Gray)
                 }
             }
             else -> {
@@ -118,7 +118,7 @@ fun OrderItemCard(order: Order, onPayClick: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Pesanan #${order.orderId.take(6).uppercase()}",
+                    text = "Order #${order.orderId.take(6).uppercase()}",
                     fontWeight = FontWeight.Bold
                 )
                 Text(
@@ -145,7 +145,7 @@ fun OrderItemCard(order: Order, onPayClick: () -> Unit) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("Total Pesanan", fontWeight = FontWeight.SemiBold)
+                Text("Order Total", fontWeight = FontWeight.SemiBold)
                 Text(
                     formatCurrency.format(order.totalPrice),
                     fontWeight = FontWeight.Bold,
@@ -172,7 +172,7 @@ fun OrderItemCard(order: Order, onPayClick: () -> Unit) {
                         onClick = onPayClick, // Panggil lambda yang diteruskan
                         colors = ButtonDefaults.buttonColors(containerColor = Color.Black)
                     ) {
-                        Text("Bayar Sekarang")
+                        Text("Pay Now")
                     }
                 }
             }

@@ -260,7 +260,7 @@ fun SearchHistoryView(history: List<String>, onHistoryClick: (String) -> Unit) {
     LazyColumn(modifier = Modifier.padding(horizontal = 16.dp)) {
         item {
             Text(
-                text = "Riwayat Pencarian",
+                text = "Search History",
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(vertical = 8.dp)
             )
@@ -288,9 +288,9 @@ fun SearchHistoryView(history: List<String>, onHistoryClick: (String) -> Unit) {
 @Composable
 fun SearchResultsHeader(query: String) {
     val headerText = if (query.isBlank()) {
-        "Semua Produk"
+        "All Products"
     } else {
-        "Hasil untuk \"$query\""
+        "Results for \"$query\""
     }
     Text(
         text = headerText,

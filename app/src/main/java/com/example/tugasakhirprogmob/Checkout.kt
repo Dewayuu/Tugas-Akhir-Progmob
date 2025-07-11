@@ -31,6 +31,10 @@ import com.example.tugasakhirprogmob.viewmodel.CartViewModel
 import com.example.tugasakhirprogmob.viewmodel.ProfileViewModel
 import java.text.NumberFormat
 import java.util.*
+import com.example.tugasakhirprogmob.viewmodel.CartSelectionHolder
+import androidx.compose.runtime.mutableStateOf
+
+
 
 // Data class untuk opsi pengiriman
 data class ShippingOption(val name: String, val duration: String, val cost: Double)
@@ -42,9 +46,10 @@ fun CheckoutScreen(
     cartViewModel: CartViewModel = viewModel(),
     profileViewModel: ProfileViewModel = viewModel()
 ) {
+
     val context = LocalContext.current
-    val cartItems by cartViewModel.cartItems.collectAsStateWithLifecycle()
-    val subtotal by cartViewModel.subtotal.collectAsStateWithLifecycle()
+    //val cartItems by cartViewModel.cartItems.collectAsStateWithLifecycle()
+    //val subtotal by cartViewModel.subtotal.collectAsStateWithLifecycle()
     val orderPlaced by cartViewModel.orderPlacedSuccessfully.collectAsStateWithLifecycle()
     val userProfile by profileViewModel.userProfile.collectAsStateWithLifecycle()
 
@@ -60,7 +65,12 @@ fun CheckoutScreen(
         ShippingOption("Express", "1-2 Hari Kerja", 15000.0)
     )
     var selectedShipping by remember { mutableStateOf(shippingOptions.first()) }
-    val total = subtotal + selectedShipping.cost + 1000.0 // +1000 untuk platform fee
+    val selectedItems = CartSelectionHolder.selectedItems
+    //val selectedItems = remember { CartSelectionHolder.selectedItems }
+    val subtotal = selectedItems.sumOf { it.price * it.quantity }
+    val total = subtotal + selectedShipping.cost + 1000.0
+
+    //val total = subtotal + selectedShipping.cost + 1000.0 // +1000 untuk platform fee
     // ------------------------------------------
 
     // Ambil data profil saat layar pertama kali dibuka
@@ -118,7 +128,7 @@ fun CheckoutScreen(
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                         )
                     }
-                    items(cartItems) { item ->
+                    items(selectedItems) { item ->
                         CheckoutProductItem(item, formatCurrency)
                     }
                 }
@@ -126,7 +136,7 @@ fun CheckoutScreen(
                 // Bagian bawah layar
                 Column(Modifier.background(Color.White)) {
                     OrderSummary(
-                        itemCount = cartItems.sumOf { it.quantity },
+                        itemCount = selectedItems.sumOf { it.quantity },
                         subtotal = subtotal,
                         delivery = selectedShipping.cost,
                         platformFee = 1000.0,
@@ -147,7 +157,7 @@ fun CheckoutScreen(
                                 totalDenganPengiriman = total
                             )
                         },
-                        enabled = cartItems.isNotEmpty() && !isLoading,
+                        enabled = selectedItems.isNotEmpty() && !isLoading,
                         colors = ButtonDefaults.buttonColors(containerColor = Color.Black),
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier

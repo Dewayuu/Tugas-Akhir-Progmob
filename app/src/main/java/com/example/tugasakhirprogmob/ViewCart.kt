@@ -30,6 +30,12 @@ import com.example.tugasakhirprogmob.viewmodel.CartItem
 import com.example.tugasakhirprogmob.viewmodel.CartViewModel
 import java.text.NumberFormat
 import java.util.*
+import androidx.compose.material3.Checkbox
+import androidx.compose.runtime.*
+import com.example.tugasakhirprogmob.viewmodel.CartSelectionHolder
+
+
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,8 +45,14 @@ fun ViewCartScreen(
     cartViewModel: CartViewModel = viewModel()
 ) {
     val cartItems by cartViewModel.cartItems.collectAsStateWithLifecycle()
-    val subtotal by cartViewModel.subtotal.collectAsStateWithLifecycle()
+    val selectedMap = remember { mutableStateMapOf<String, Boolean>() }
+    val selectedSubtotal = remember {
+        derivedStateOf {
+            CartSelectionHolder.selectedItems.sumOf { it.price * it.quantity }
+        }
+    }
     val formatCurrency = remember { NumberFormat.getCurrencyInstance(Locale("in", "ID")) }
+    val selectedItems = CartSelectionHolder.selectedItems
 
     Scaffold(
         topBar = {
@@ -94,14 +106,34 @@ fun ViewCartScreen(
                         .padding(top = 24.dp)
                 ) {
                     items(cartItems, key = { it.id }) { item ->
+                        val isChecked = selectedMap[item.id] ?: false
                         DynamicCartItem(
                             cartItem = item,
-                            // <-- **PERBAIKAN: Mengirim `item.productId` ke fungsi**
-                            onIncrease = { cartViewModel.updateQuantity(item.id, item.productId, item.quantity + 1) },
-                            onDecrease = { cartViewModel.updateQuantity(item.id, item.productId, item.quantity - 1) },
-                            modifier = Modifier.padding(horizontal = 16.dp)
+                            isChecked = isChecked,
+                            onCheckedChange = { checked ->
+                                selectedMap[item.id] = checked
+                                if (checked) {
+                                    CartSelectionHolder.selectedItems.add(item)
+                                } else {
+                                    CartSelectionHolder.selectedItems.remove(item)
+                                }
+                            },
+                            onIncrease = {
+                                cartViewModel.updateQuantity(
+                                    item.id,
+                                    item.productId,
+                                    item.quantity + 1
+                                )
+                            },
+                            onDecrease = {
+                                cartViewModel.updateQuantity(
+                                    item.id,
+                                    item.productId,
+                                    item.quantity - 1
+                                )
+                            },
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                         )
-                        Spacer(Modifier.height(16.dp))
                     }
                 }
             }
@@ -129,7 +161,13 @@ fun ViewCartScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(text = "Subtotal", color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                        Text(text = formatCurrency.format(subtotal), color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
+                        Text(
+                            text = formatCurrency.format(selectedSubtotal.value),
+                            color = Color.Black,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+
                     }
                 }
 
@@ -156,6 +194,8 @@ fun ViewCartScreen(
 @Composable
 fun DynamicCartItem(
     cartItem: CartItem,
+    isChecked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
     onIncrease: () -> Unit,
     onDecrease: () -> Unit,
     modifier: Modifier = Modifier
@@ -169,6 +209,11 @@ fun DynamicCartItem(
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        Checkbox(
+            checked = isChecked,
+            onCheckedChange = onCheckedChange,
+            modifier = Modifier.padding(end = 8.dp)
+        )
         AsyncImage(
             model = cartItem.imageUrl,
             contentDescription = cartItem.name,
